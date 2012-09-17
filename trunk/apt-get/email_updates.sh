@@ -8,9 +8,16 @@
 #   available for the OS. If a particular patch has been reported previously
 #   the goal is to NOT report it again unless requested (via FLAG).
 
+# Internal Field Separator(s)
+# Set to newlines only so spaces won't trigger a new array entry and so loops
+# will only consider items separated by newlines to be the next in the loop
+IFS=$'\n'
+
 # Get list of all available packages for the OS
 apt-get update > /dev/null
 
+# This is checked before too much processing happens to see if there are ANY updates available, regardless
+# of whether they've already been reported.
 RESULT=$(apt-get dist-upgrade -s)
 
 # Redmine tags
@@ -22,19 +29,26 @@ DEST_EMAIL="updates-notification@example.org"
 TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=`date "+%B %d %Y"`
 
-TEST_UPDATE='Inst libexchange-storage1.2-3 [2.28.3.1-0ubuntu6] (2.28.3.1-0ubuntu6.1 Ubuntu:10.04/lucid-updates)'
+# FIXME: T
+ALREADY_REPORTED[0]='icedtea-netx [1.1.3-1ubuntu1.1] (1.2-2ubuntu0.11.10.3 Ubuntu:11.10/oneiric-updates [i386])'
+
+#echo $ALREADY_REPORTED
 
 # If updates are available ...
 if [[ "${RESULT}" =~ "Inst" ]]; then
 
-    IFS=$'\n'
-    testing=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'))
-    #echo ${testing[@]}
+    AVAILABLE_UPDATES=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'|cut -c 6-))
 
-    for i in "${testing[@]}" 
+    for i in "${AVAILABLE_UPDATES[@]}" 
     do
-        if [[ "$i" == "${TEST_UPDATE}" ]]; then
-            echo "$i equals the string" 
+        # FIXME: This will need to check if the entry is already in the database from being
+        #        previously reported.
+        if [[ "$i" == "${ALREADY_REPORTED[0]}" ]]; then
+            echo "$i equals the string, skipping this update"
+	else
+	  # Placeholder for adding the patch to the PATCHES_TO_REPORT
+          # array and also to the database
+	  :
         fi
     done
 
