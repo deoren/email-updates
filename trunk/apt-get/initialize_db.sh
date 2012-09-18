@@ -22,7 +22,7 @@ TODAY=$(date "+%B %d %Y")
 # Schema for database:
 DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
 
-DB_FILE="/var/cache/apt-get.db"
+DB_FILE="/var/cache/email_updates/apt-get.db"
 
 # FIXME: Create Bash function instead of using external dirname tool?
 DB_FILE_DIR=$(dirname ${DB_FILE})
