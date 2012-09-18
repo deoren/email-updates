@@ -15,6 +15,8 @@
 # Settings
 #########################
 
+DEBUG_ON=1
+
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
 TODAY=$(date "+%B %d %Y")
@@ -45,17 +47,23 @@ initialize_db() {
 
     # Check if cache dir already exists
     if [[ ! -d ${DB_FILE_DIR} ]]; then
-        echo "Creating ${DB_FILE_DIR}"
+        if [ ${DEBUG_ON} ]; then
+            echo "Creating ${DB_FILE_DIR}"
+        fi
         mkdir ${DB_FILE_DIR}
     fi
 
     # Check if database already exists
     if [[ -f ${DB_FILE} ]]; then
-        echo "${DB_FILE} already exists"
+        if [ ${DEBUG_ON} ]; then
+            echo "${DB_FILE} already exists"
+        fi
         return 0
     else
         # if not, create it
-        echo "Creating ${DB_FILE}"
+        if [ ${DEBUG_ON} ]; then
+            echo "Creating ${DB_FILE}"
+        fi
         sqlite3 ${DB_FILE} ${DB_STRUCTURE}
     fi
 }
