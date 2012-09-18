@@ -8,17 +8,17 @@
 #   available for the OS. If a particular patch has been reported previously
 #   the goal is to NOT report it again unless requested (via FLAG).
 
-# Internal Field Separator(s)
-# Set to newlines only so spaces won't trigger a new array entry and so loops
-# will only consider items separated by newlines to be the next in the loop
-IFS=$'\n'
+# References:
+#   * http://quickies.andreaolivato.net/post/133473114/using-sqlite3-in-bash
+#   * The Definitive Guide to SQLite, 2e
 
-# Get list of all available packages for the OS
-apt-get update > /dev/null
 
-# This is checked before too much processing happens to see if there are ANY updates available, regardless
-# of whether they've already been reported.
-RESULT=$(apt-get dist-upgrade -s)
+#########################
+# Settings
+#########################
+
+# Just in case it's not already there (for sqlite3)
+PATH="${PATH}:/usr/bin"
 
 # Redmine tags
 EMAIL_TAG_PROJECT="server-support"
@@ -27,12 +27,70 @@ EMAIL_TAG_STATUS="Assigned"
 
 DEST_EMAIL="updates-notification@example.org"
 TEMP_FILE="/tmp/updates_list_$$.tmp"
-TODAY=`date "+%B %d %Y"`
+TODAY=$(date "+%B %d %Y")
+
+# Schema for database:
+DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+
+DB_FILE="/var/cache/email_updates/apt-get.db"
+
+#------------------------------
+# Internal Field Separator
+#------------------------------
+# Backup of IFS
+OIFS=${IFS}
+
+# Set to newlines only so spaces won't trigger a new array entry and so loops
+# will only consider items separated by newlines to be the next in the loop
+IFS=$'\n'
+
+#########################
+# Functions
+#########################
+
+verify_dependencies {
+
+    # Verify that all dependencies are present
+    # sqlite3, mail|mailx, ?
+
+}
+
+initialize_db {
+
+    # Check if database already exists
+    if [[ -f ${DB_FILE} ]]; then
+        return 0
+    else
+            
+        # if not, create it
+        sqlite3 ${DB_FILE} ${DB_STRUCTURE}
+    fi
+}
+
+patch_already_reported {
+
+    # $1 should equal the quoted patch that we're checking
+
+    # See if the selected patch has already been reported
+    # FIXME: Use proper quoting and comparison
+    sqlite3 ${DB_FILE} "select * from data where patch = $1;"
+
+}
+
+
+
+# Get list of all available packages for the OS
+apt-get update > /dev/null
+
+# This is checked before too much processing happens to see if there are ANY updates available, regardless
+# of whether they've already been reported.
+RESULT=$(apt-get dist-upgrade -s)
+
+
 
 # FIXME: T
 ALREADY_REPORTED[0]='icedtea-netx [1.1.3-1ubuntu1.1] (1.2-2ubuntu0.11.10.3 Ubuntu:11.10/oneiric-updates [i386])'
 
-#echo $ALREADY_REPORTED
 
 # If updates are available ...
 if [[ "${RESULT}" =~ "Inst" ]]; then
