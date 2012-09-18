@@ -17,6 +17,8 @@
 # Settings
 #########################
 
+DEBUG_ON=1
+
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
 
@@ -34,6 +36,17 @@ DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAM
 
 DB_FILE="/var/cache/email_updates/apt-get.db"
 
+# FIXME: Create Bash function instead of using external dirname tool?
+DB_FILE_DIR=$(dirname ${DB_FILE})
+
+# Anything required for this script to run properly
+DEPENDENCIES=(
+
+    sqlite3
+    mailx
+
+)
+
 #------------------------------
 # Internal Field Separator
 #------------------------------
@@ -48,45 +61,84 @@ IFS=$'\n'
 # Functions
 #########################
 
-verify_dependencies {
+verify_dependencies() {
 
     # Verify that all dependencies are present
     # sqlite3, mail|mailx, ?
 
+    for dependency in ${DEPENDENCIES[@]} 
+    do
+        # Debug output
+        #echo "$(which ${dependency}) ${dependency}"
+
+        # Try to locate the dependency within the path. If found, compare
+        # the basename of the dependency against the full path. If there
+        # is a match, consider the required dependency present on the system
+        if [[ "$(which ${dependency})" =~ "${dependency}" ]]; then
+            if [ ${DEBUG_ON} ]; then
+                echo "[I] ${dependency} found."
+            fi
+        else
+            echo "[!] ${dependency} missing. Please install then try again."
+            exit 1
+        fi
+
+    done
 }
 
-initialize_db {
+
+initialize_db() {
+
+    # Check if cache dir already exists
+    if [[ ! -d ${DB_FILE_DIR} ]]; then
+        if [ ${DEBUG_ON} ]; then
+            echo "Creating ${DB_FILE_DIR}"
+        fi
+        mkdir ${DB_FILE_DIR}
+    fi
 
     # Check if database already exists
     if [[ -f ${DB_FILE} ]]; then
+        if [ ${DEBUG_ON} ]; then
+            echo "${DB_FILE} already exists"
+        fi
         return 0
     else
-            
         # if not, create it
+        if [ ${DEBUG_ON} ]; then
+            echo "Creating ${DB_FILE}"
+        fi
         sqlite3 ${DB_FILE} ${DB_STRUCTURE}
     fi
 }
 
-patch_already_reported {
+
+is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
 
     # See if the selected patch has already been reported
     # FIXME: Use proper quoting and comparison
-    sqlite3 ${DB_FILE} "select * from data where patch = $1;"
+    sqlite3 ${DB_FILE} "SELECT * FROM data WHERE patch = \'$1\';"
+
 
 }
 
-
+#############################
+# Main Code
+#############################
 
 # Get list of all available packages for the OS
-apt-get update > /dev/null
+# FIXME: Enable this later. During testing I don't want to hammer other servers
+#        and will run this once manually prior to testing script changes.
+#apt-get update > /dev/null
 
 # This is checked before too much processing happens to see if there are ANY updates available, regardless
 # of whether they've already been reported.
 RESULT=$(apt-get dist-upgrade -s)
 
-
+# FIXME: We'll do this manually for now
+initialize_db
 
 # FIXME: T
 ALREADY_REPORTED[0]='icedtea-netx [1.1.3-1ubuntu1.1] (1.2-2ubuntu0.11.10.3 Ubuntu:11.10/oneiric-updates [i386])'
@@ -95,6 +147,7 @@ ALREADY_REPORTED[0]='icedtea-netx [1.1.3-1ubuntu1.1] (1.2-2ubuntu0.11.10.3 Ubunt
 # If updates are available ...
 if [[ "${RESULT}" =~ "Inst" ]]; then
 
+    # Create an array containing all updates, one per array member
     AVAILABLE_UPDATES=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'|cut -c 6-))
 
     for i in "${AVAILABLE_UPDATES[@]}" 
