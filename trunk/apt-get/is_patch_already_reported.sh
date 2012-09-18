@@ -49,7 +49,7 @@ is_patch_already_reported() {
 
     # See if the selected patch has already been reported
     # FIXME: Use proper quoting and comparison
-    query_result = sqlite3 ${DB_FILE} "SELECT * FROM data WHERE patch = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD}
+    query_result=$(sqlite3 ${DB_FILE} "SELECT * FROM data WHERE patch = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
 
     if [[ "$query_result" == "${1}" ]]; then
         # The goal is to report a match
