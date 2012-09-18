@@ -11,6 +11,8 @@
 # Settings
 #########################
 
+DEBUG_ON=1
+
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
 
@@ -35,8 +37,16 @@ verify_dependencies() {
         # Debug output
         #echo "$(which ${dependency}) ${dependency}"
 
+        # Try to locate the dependency within the path. If found, compare
+        # the basename of the dependency against the full path. If there
+        # is a match, consider the required dependency present on the system
         if [[ "$(which ${dependency})" =~ "${dependency}" ]]; then
-           echo "Found ${dependency}"
+            if [ ${DEBUG_ON} ]; then
+                echo "[I] ${dependency} found."
+            fi
+        else
+            echo "[!] ${dependency} missing. Please install then try again."
+            exit 1
         fi
 
     done
