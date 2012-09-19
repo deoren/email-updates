@@ -11,6 +11,9 @@
 # References:
 #   * http://quickies.andreaolivato.net/post/133473114/using-sqlite3-in-bash
 #   * The Definitive Guide to SQLite, 2e
+#   * http://www.thegeekstuff.com/2010/06/bash-array-tutorial/
+#   * http://stackoverflow.com/questions/5431909/bash-functions-return-boolean-to-be-used-in-if
+#   * http://mywiki.wooledge.org/BashPitfalls
 
 
 #########################
@@ -75,7 +78,7 @@ verify_dependencies() {
         # the basename of the dependency against the full path. If there
         # is a match, consider the required dependency present on the system
         if [[ "$(which ${dependency})" =~ "${dependency}" ]]; then
-            if [ ${DEBUG_ON} ]; then
+            if [[ "${DEBUG_ON}" -ne 0 ]]; then
                 echo "[I] ${dependency} found."
             fi
         else
@@ -91,7 +94,7 @@ initialize_db() {
 
     # Check if cache dir already exists
     if [[ ! -d ${DB_FILE_DIR} ]]; then
-        if [ ${DEBUG_ON} ]; then
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
             echo "Creating ${DB_FILE_DIR}"
         fi
         mkdir ${DB_FILE_DIR}
@@ -99,13 +102,13 @@ initialize_db() {
 
     # Check if database already exists
     if [[ -f ${DB_FILE} ]]; then
-        if [ ${DEBUG_ON} ]; then
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
             echo "${DB_FILE} already exists"
         fi
         return 0
     else
         # if not, create it
-        if [ ${DEBUG_ON} ]; then
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
             echo "Creating ${DB_FILE}"
         fi
         sqlite3 ${DB_FILE} ${DB_STRUCTURE}
@@ -130,6 +133,66 @@ is_patch_already_reported() {
         return 1
     fi
 }
+
+
+report_patches() {
+
+        # $1 is the array of unreported patches
+
+        # If we're in debug mode, don't send an email
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
+            print_patches_array "$1"             
+        else            
+            # we're not in debug mode, so let's send an email                
+            email_report $1
+        fi
+
+}
+
+
+print_patches_array() {
+
+    # This function is kind of redundant, but I'm leaving it in anyway for now
+
+    echo "${#1[@]} update(s) are available"
+
+    for update in "${1[@]}" 
+    do
+        echo "  * ${update}"
+    done
+
+}
+
+
+email_report() {
+
+    # Use $1 array function argument
+    NUMBER_OF_UPDATES="${#1[@]}"
+    EMAIL_SUBJECT="${HOSTNAME}: ${NUMBER_OF_UPDATES} update(s) are available"
+
+    # Tag report with Redmine compliant keywords
+    # http://www.redmine.org/projects/redmine/wiki/RedmineReceivingEmails
+    echo "Project: ${EMAIL_TAG_PROJECT}" >> ${TEMP_FILE}
+    echo "Category: ${EMAIL_TAG_CATEGORY}" >> ${TEMP_FILE}
+    echo "Status: ${EMAIL_TAG_STATUS}" >> ${TEMP_FILE}
+
+    # Send the report via email
+    mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+
+}
+
+
+record_reported_patches() {
+
+    # Receive an array of patches ($1) and add to the database
+
+    for update in "${1[@]}" 
+    do
+        sqlite3 ${DB_FILE} "insert into data (patch) values (\"${update}\");" 
+    done
+
+}
+
 
 #############################
 # Setup
@@ -161,31 +224,30 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
 
     # Create an array containing all updates, one per array member
     AVAILABLE_UPDATES=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'|cut -c 6-))
+    
+    declare -a UNREPORTED_UPDATES
 
     for update in "${AVAILABLE_UPDATES[@]}" 
     do
         # Check to see if the patch has been previously reported
-        if $(is_patch_already_reported ${update})
-        then
-            echo "[S] ${update}"
+        if $(is_patch_already_reported ${update}); then
+
+            # Skip the update
+            if [[ "${DEBUG_ON}" -ne 0 ]]; then                
+                echo "[S] ${update}"
+            fi
         else
-            echo "[I] ${update}"
+            # Add the update to an array to be reported
+            UNREPORTED_UPDATES=("${UNREPORTED_UPDATES}" "${update}")
+            
+            if [[ "${DEBUG_ON}" -ne 0 ]]; then                
+                echo "[I] ${update}"
+            fi            
         fi
     done
 
-    # Write list of applicable updates to temp file
-#    apt-get dist-upgrade -s | grep 'Inst' | cut -c 6-500 | sort > ${TEMP_FILE}
-#    NUMBER_OF_UPDATES=`cat ${TEMP_FILE} | wc -l`
+    # FIXME: Will the internal $1 var be a copy of the passed array?
+    report_patches ${UNREPORTED_UPDATES[@]}
 
-#    EMAIL_SUBJECT="${HOSTNAME}: ${NUMBER_OF_UPDATES} updates are available"
-
-    # Tag report with Redmine compliant keywords
-    # http://www.redmine.org/projects/redmine/wiki/RedmineReceivingEmails
-#    echo "Project: ${EMAIL_TAG_PROJECT}" >> ${TEMP_FILE}
-#    echo "Category: ${EMAIL_TAG_CATEGORY}" >> ${TEMP_FILE}
-#    echo "Status: ${EMAIL_TAG_STATUS}" >> ${TEMP_FILE}
-
-    # Send the report via email
-#    cat ${TEMP_FILE} | mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL}
 fi
 
