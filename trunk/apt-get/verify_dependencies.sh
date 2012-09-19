@@ -41,7 +41,7 @@ verify_dependencies() {
         # the basename of the dependency against the full path. If there
         # is a match, consider the required dependency present on the system
         if [[ "$(which ${dependency})" =~ "${dependency}" ]]; then
-            if [ ${DEBUG_ON} ]; then
+            if [[ "${DEBUG_ON}" -ne 0 ]]; then
                 echo "[I] ${dependency} found."
             fi
         else

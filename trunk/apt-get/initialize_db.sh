@@ -47,7 +47,7 @@ initialize_db() {
 
     # Check if cache dir already exists
     if [[ ! -d ${DB_FILE_DIR} ]]; then
-        if [ ${DEBUG_ON} ]; then
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
             echo "Creating ${DB_FILE_DIR}"
         fi
         mkdir ${DB_FILE_DIR}
@@ -55,13 +55,13 @@ initialize_db() {
 
     # Check if database already exists
     if [[ -f ${DB_FILE} ]]; then
-        if [ ${DEBUG_ON} ]; then
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
             echo "${DB_FILE} already exists"
         fi
         return 0
     else
         # if not, create it
-        if [ ${DEBUG_ON} ]; then
+        if [[ "${DEBUG_ON}" -ne 0 ]]; then
             echo "Creating ${DB_FILE}"
         fi
         sqlite3 ${DB_FILE} ${DB_STRUCTURE}
