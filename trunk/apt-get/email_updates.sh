@@ -21,8 +21,15 @@
 # Settings
 #########################
 
+# Not a bad idea to run with this enabled for a while after big changes
+# and have cron deliver the output to you for verification
 DEBUG_ON=1
+
+# Usually not needed
 VERBOSE_DEBUG_ON=0
+
+# Useful for testing where we don't want to bang on upstream servers too much
+SKIP_APT_GET_UPDATE=0
 
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
@@ -59,6 +66,7 @@ DEPENDENCIES=(
 # Internal Field Separator
 #------------------------------
 # Backup of IFS
+# FIXME: Needed for anything?
 OIFS=${IFS}
 
 # Set to newlines only so spaces won't trigger a new array entry and so loops
@@ -79,7 +87,7 @@ verify_dependencies() {
         echo -e   '************************'
     fi
 
-    for dependency in ${DEPENDENCIES[@]} 
+    for dependency in ${DEPENDENCIES[@]}
     do
         # Debug output
         #echo "$(which ${dependency}) ${dependency}"
@@ -97,7 +105,7 @@ verify_dependencies() {
         fi
 
     done
-    
+
 }
 
 
@@ -130,7 +138,7 @@ initialize_db() {
         fi
         sqlite3 ${DB_FILE} ${DB_STRUCTURE}
     fi
-    
+
 }
 
 
@@ -155,27 +163,27 @@ print_patch_arrays() {
 
     # This function is useful for getting debug output "on demand"
     # when the global debug option is disabled
-    
+
     #NOTE: Relies on global variables
-    
+
     echo -e '\n\n***************************************************'
     #echo "${#UNREPORTED_UPDATES[@]} unreported update(s) are available"
     echo "UNREPORTED UPDATES"
     echo -e '***************************************************\n'
     echo -e "  ${#UNREPORTED_UPDATES[@]} unreported update(s) are available\n"
 
-    for unreported_update in "${UNREPORTED_UPDATES[@]}" 
+    for unreported_update in "${UNREPORTED_UPDATES[@]}"
     do
         echo "  * ${unreported_update}"
     done
-    
+
     echo -e '\n***************************************************'
     #echo "${#SKIPPED_UPDATES[@]} skipped update(s) are available"
     echo "SKIPPED UPDATES"
     echo -e '***************************************************\n'
     echo -e "  ${#SKIPPED_UPDATES[@]} skipped update(s) are available\n"
 
-    for skipped_update in "${SKIPPED_UPDATES[@]}" 
+    for skipped_update in "${SKIPPED_UPDATES[@]}"
     do
         echo "  * ${skipped_update}"
     done
@@ -191,9 +199,9 @@ email_report() {
     # Use $1 array function argument
     NUMBER_OF_UPDATES="${#updates[@]}"
     EMAIL_SUBJECT="${HOSTNAME}: ${NUMBER_OF_UPDATES} update(s) are available"
-    
+
     # Write updates to the temp file
-    for update in "${updates[@]}" 
+    for update in "${updates[@]}"
     do
         echo "${update}" >> ${TEMP_FILE}
     done
@@ -214,12 +222,12 @@ record_reported_patches() {
 
     # $@ is ALL arguments to this function, i.e., the unreported patches
     updates=(${@})
-    
+
     # Add reported patches to the database
 
-    for update in "${updates[@]}" 
+    for update in "${updates[@]}"
     do
-        sqlite3 ${DB_FILE} "insert into data (patch) values (\"${update}\");" 
+        sqlite3 ${DB_FILE} "insert into data (patch) values (\"${update}\");"
     done
 
 }
@@ -235,12 +243,20 @@ verify_dependencies
 # Create SQLite DB if it doesn't already exist
 initialize_db
 
-# Get list of all available packages for the OS
-# FIXME: Enable this later. During testing I don't want to hammer other servers
-#        and will run this once manually prior to testing script changes.
-#apt-get update > /dev/null
 
-# This is checked before too much processing happens to see if there are ANY 
+if [[ "${DEBUG_ON}" -ne 0 ]]; then
+    echo -e '\n\n************************'
+    echo "Checking for updates ..."
+    echo -e   '************************'
+fi
+
+
+# Get list of all available packages for the OS if running in production mode
+if [[ "${SKIP_APT_GET_UPDATE}" -eq 0 ]]; then
+    apt-get update > /dev/null
+fi
+
+# This is checked before too much processing happens to see if there are ANY
 # updates available, regardless of whether they've already been reported.
 RESULT=$(apt-get dist-upgrade -s)
 
@@ -255,10 +271,10 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
 
     # Create an array containing all updates, one per array member
     AVAILABLE_UPDATES=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'|cut -c 6-))
-    
+
     declare -a UNREPORTED_UPDATES SKIPPED_UPDATES
 
-    for update in "${AVAILABLE_UPDATES[@]}" 
+    for update in "${AVAILABLE_UPDATES[@]}"
     do
         # Check to see if the patch has been previously reported
         if $(is_patch_already_reported ${update}); then
@@ -266,18 +282,18 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
             # Skip the update, but log it for troubleshooting purposes
             SKIPPED_UPDATES=("${SKIPPED_UPDATES[@]}" "${update}")
 
-            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then                
+            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
                 echo "[SKIP] ${update}"
             fi
-            
+
         else
             # Add the update to an array to be reported
             # FIXME: There is a bug here that results in a duplicate item
             UNREPORTED_UPDATES=("${UNREPORTED_UPDATES[@]}" "${update}")
-            
-            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then                
+
+            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
                 echo "[INCL] ${update}"
-            fi            
+            fi
         fi
     done
 
@@ -285,10 +301,21 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
 
     # If we're not in debug mode, send an email
     if [[ "${DEBUG_ON}" -ne 0 ]]; then
-        email_report "${UNREPORTED_UPDATES[@]}"        
+        email_report "${UNREPORTED_UPDATES[@]}"
     fi
-    
+
     record_reported_patches "${UNREPORTED_UPDATES[@]}"
 
-fi
+else
 
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        echo -e '\n\n************************'
+        echo "No updates found"
+        echo -e   '************************'
+    fi
+
+    # The "do nothing" operator in case DEBUG_ON is off
+    # FIXME: Needed?
+    :
+
+fi
