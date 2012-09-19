@@ -117,31 +117,43 @@ is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
 
+    query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM data WHERE patch = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
+
     # See if the selected patch has already been reported
-    # FIXME: Use proper quoting and comparison
-    sqlite3 ${DB_FILE} "SELECT * FROM data WHERE patch = \'$1\';"
-
-
+    if [[ "$query_result" == "${1}" ]]; then
+        # The goal is to report a match
+        #echo "Match"
+        return 0
+    else
+        # Report no match
+        #echo "No match"
+        return 1
+    fi
 }
 
 #############################
-# Main Code
+# Setup
 #############################
+
+# Make sure we have sqlite3, mailx and other necessary tools installed
+verify_dependencies
+
+# Create SQLite DB if it doesn't already exist
+initialize_db
 
 # Get list of all available packages for the OS
 # FIXME: Enable this later. During testing I don't want to hammer other servers
 #        and will run this once manually prior to testing script changes.
 #apt-get update > /dev/null
 
-# This is checked before too much processing happens to see if there are ANY updates available, regardless
-# of whether they've already been reported.
+# This is checked before too much processing happens to see if there are ANY 
+# updates available, regardless of whether they've already been reported.
 RESULT=$(apt-get dist-upgrade -s)
 
-# FIXME: We'll do this manually for now
-initialize_db
 
-# FIXME: T
-ALREADY_REPORTED[0]='icedtea-netx [1.1.3-1ubuntu1.1] (1.2-2ubuntu0.11.10.3 Ubuntu:11.10/oneiric-updates [i386])'
+#############################
+# Main Code
+#############################
 
 
 # If updates are available ...
@@ -150,16 +162,14 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
     # Create an array containing all updates, one per array member
     AVAILABLE_UPDATES=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'|cut -c 6-))
 
-    for i in "${AVAILABLE_UPDATES[@]}" 
+    for update in "${AVAILABLE_UPDATES[@]}" 
     do
-        # FIXME: This will need to check if the entry is already in the database from being
-        #        previously reported.
-        if [[ "$i" == "${ALREADY_REPORTED[0]}" ]]; then
-            echo "$i equals the string, skipping this update"
-	else
-	  # Placeholder for adding the patch to the PATCHES_TO_REPORT
-          # array and also to the database
-	  :
+        # Check to see if the patch has been previously reported
+        if $(is_patch_already_reported ${update})
+        then
+            echo "[S] ${update}"
+        else
+            echo "[I] ${update}"
         fi
     done
 
