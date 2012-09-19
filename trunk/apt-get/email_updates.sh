@@ -14,6 +14,7 @@
 #   * http://www.thegeekstuff.com/2010/06/bash-array-tutorial/
 #   * http://stackoverflow.com/questions/5431909/bash-functions-return-boolean-to-be-used-in-if
 #   * http://mywiki.wooledge.org/BashPitfalls
+#   * http://stackoverflow.com/questions/1063347/passing-arrays-as-parameters-in-bash
 
 
 #########################
@@ -238,7 +239,7 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
             fi
         else
             # Add the update to an array to be reported
-            UNREPORTED_UPDATES=("${UNREPORTED_UPDATES}" "${update}")
+            UNREPORTED_UPDATES=("${UNREPORTED_UPDATES[@]}" "${update}")
             
             if [[ "${DEBUG_ON}" -ne 0 ]]; then                
                 echo "[I] ${update}"
@@ -248,6 +249,8 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
 
     # FIXME: Will the internal $1 var be a copy of the passed array?
     report_patches ${UNREPORTED_UPDATES[@]}
+    
+    # record_reported_patches ${UNREPORTED_UPDATES[@]}
 
 fi
 
