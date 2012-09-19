@@ -9,6 +9,8 @@
 # References:
 #   * http://quickies.andreaolivato.net/post/133473114/using-sqlite3-in-bash
 #   * The Definitive Guide to SQLite, 2e
+#   * http://stackoverflow.com/questions/5431909/bash-functions-return-boolean-to-be-used-in-if
+#   * http://mywiki.wooledge.org/BashPitfalls
 
 
 #########################
@@ -20,7 +22,7 @@ DEBUG_ON=1
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
 
-# What field in the database is patch information stored?
+# In which field in the database is patch information stored?
 DB_PATCH_FIELD=2
 
 DB_FILE="/var/cache/email_updates/apt-get.db"
@@ -47,11 +49,9 @@ is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
 
-    # See if the selected patch has already been reported
-    # FIXME: Use proper quoting and comparison
-
     query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM data WHERE patch = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
 
+    # See if the selected patch has already been reported
     if [[ "$query_result" == "${1}" ]]; then
         # The goal is to report a match
         #echo "Match"
@@ -73,10 +73,20 @@ echo $test_result
 
 #is_patch_already_reported 'libkactivities-bin [4:4.8.4-0ubuntu0.1] (4:4.8.5-0ubuntu0.1 Ubuntu:12.04/precise-updates [i386])'
 
-if [[ "$test_result" -eq 0 ]]; then
-  echo "Success"
+# This form doesn't work
+if [[ $test_result ]]
+then
+  echo "First attempt succeeds"
 else
-  echo "Failure"
+  echo "First attempt fails"
+fi
+
+# This one does?
+if $test_result
+then
+  echo "Second attempt works"
+else
+  echo "Second attempt fails"
 fi
 
 # Create an array containing all updates, one per array member
@@ -87,13 +97,14 @@ echo "${#AVAILABLE_UPDATES[@]} updates are available"
 for update in "${AVAILABLE_UPDATES[@]}" 
 do
     # Check to see if the patch has been previously reported
-    patch_already_reported=$(is_patch_already_reported ${update})
-
-    if [[ ${patch_already_reported} -eq 0 ]]; then
-        echo "\"${update}\" is listed in the database"
-        echo "[W] Skipping this update"
+    # Note: If the value were assigned to a variable and then tested
+    #       the test would fail. I don't remember why (it's been too long
+    #       since I used Bash regularly).
+    if $(is_patch_already_reported ${update})
+    then
+        echo "[S] ${update}"
     else
-        #echo "\"${update}\" is NOT listed in the database"
-        :
+        echo "[I] ${update}"
     fi
 done
+
