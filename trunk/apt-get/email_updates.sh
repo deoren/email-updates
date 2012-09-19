@@ -300,8 +300,13 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
     print_patch_arrays
 
     # If we're not in debug mode, send an email
-    if [[ "${DEBUG_ON}" -eq 0 ]]; then
-        email_report "${UNREPORTED_UPDATES[@]}"
+    if [[ "${DEBUG_ON}" -eq 0 ]]; then    
+        # If there are no updates, DON'T send an email
+        if [[ ! ${#UNREPORTED_UPDATES[@]} -gt 0 ]]; then
+            return 1
+        else
+            email_report "${UNREPORTED_UPDATES[@]}"
+        fi
     fi
 
     record_reported_patches "${UNREPORTED_UPDATES[@]}"
