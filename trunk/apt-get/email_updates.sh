@@ -22,6 +22,7 @@
 #########################
 
 DEBUG_ON=1
+VERBOSE_DEBUG_ON=0
 
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
@@ -37,6 +38,9 @@ TODAY=$(date "+%B %d %Y")
 
 # Schema for database:
 DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+
+# In which field in the database is patch information stored?
+DB_PATCH_FIELD=2
 
 DB_FILE="/var/cache/email_updates/apt-get.db"
 
@@ -69,6 +73,11 @@ verify_dependencies() {
 
     # Verify that all dependencies are present
     # sqlite3, mail|mailx, ?
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        echo -e '\n\n************************'
+        echo "Dependency checks"
+        echo -e   '************************'
+    fi
 
     for dependency in ${DEPENDENCIES[@]} 
     do
@@ -88,15 +97,22 @@ verify_dependencies() {
         fi
 
     done
+    
 }
 
 
 initialize_db() {
 
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        echo -e '\n\n************************'
+        echo "Initializing Database"
+        echo -e   '************************'
+    fi
+
     # Check if cache dir already exists
     if [[ ! -d ${DB_FILE_DIR} ]]; then
         if [[ "${DEBUG_ON}" -ne 0 ]]; then
-            echo "Creating ${DB_FILE_DIR}"
+            echo "[I] Creating ${DB_FILE_DIR}"
         fi
         mkdir ${DB_FILE_DIR}
     fi
@@ -104,16 +120,17 @@ initialize_db() {
     # Check if database already exists
     if [[ -f ${DB_FILE} ]]; then
         if [[ "${DEBUG_ON}" -ne 0 ]]; then
-            echo "${DB_FILE} already exists"
+            echo "[I] ${DB_FILE} already exists, leaving it be."
         fi
         return 0
     else
         # if not, create it
         if [[ "${DEBUG_ON}" -ne 0 ]]; then
-            echo "Creating ${DB_FILE}"
+            echo "[I] Creating ${DB_FILE}"
         fi
         sqlite3 ${DB_FILE} ${DB_STRUCTURE}
     fi
+    
 }
 
 
@@ -125,41 +142,42 @@ is_patch_already_reported() {
 
     # See if the selected patch has already been reported
     if [[ "$query_result" == "${1}" ]]; then
-        # The goal is to report a match
-        #echo "Match"
+        # Report a match
         return 0
     else
         # Report no match
-        #echo "No match"
         return 1
     fi
 }
 
 
-report_patches() {
+print_patch_arrays() {
 
-        # $1 is the array of unreported patches
+    # This function is useful for getting debug output "on demand"
+    # when the global debug option is disabled
+    
+    #NOTE: Relies on global variables
+    
+    echo -e '\n\n***************************************************'
+    #echo "${#UNREPORTED_UPDATES[@]} unreported update(s) are available"
+    echo "UNREPORTED UPDATES"
+    echo -e '***************************************************\n'
+    echo -e "  ${#UNREPORTED_UPDATES[@]} unreported update(s) are available\n"
 
-        # If we're in debug mode, don't send an email
-        if [[ "${DEBUG_ON}" -ne 0 ]]; then
-            print_patches_array "$1"             
-        else            
-            # we're not in debug mode, so let's send an email                
-            email_report $1
-        fi
-
-}
-
-
-print_patches_array() {
-
-    # This function is kind of redundant, but I'm leaving it in anyway for now
-
-    echo "${#1[@]} update(s) are available"
-
-    for update in "${1[@]}" 
+    for unreported_update in "${UNREPORTED_UPDATES[@]}" 
     do
-        echo "  * ${update}"
+        echo "  * ${unreported_update}"
+    done
+    
+    echo -e '\n***************************************************'
+    #echo "${#SKIPPED_UPDATES[@]} skipped update(s) are available"
+    echo "SKIPPED UPDATES"
+    echo -e '***************************************************\n'
+    echo -e "  ${#SKIPPED_UPDATES[@]} skipped update(s) are available\n"
+
+    for skipped_update in "${SKIPPED_UPDATES[@]}" 
+    do
+        echo "  * ${skipped_update}"
     done
 
 }
@@ -167,9 +185,18 @@ print_patches_array() {
 
 email_report() {
 
+    # $@ is ALL arguments to this function, i.e., the unreported patches
+    updates=(${@})
+
     # Use $1 array function argument
-    NUMBER_OF_UPDATES="${#1[@]}"
+    NUMBER_OF_UPDATES="${#updates[@]}"
     EMAIL_SUBJECT="${HOSTNAME}: ${NUMBER_OF_UPDATES} update(s) are available"
+    
+    # Write updates to the temp file
+    for update in "${updates[@]}" 
+    do
+        echo "${update}" >> ${TEMP_FILE}
+    done
 
     # Tag report with Redmine compliant keywords
     # http://www.redmine.org/projects/redmine/wiki/RedmineReceivingEmails
@@ -185,9 +212,12 @@ email_report() {
 
 record_reported_patches() {
 
-    # Receive an array of patches ($1) and add to the database
+    # $@ is ALL arguments to this function, i.e., the unreported patches
+    updates=(${@})
+    
+    # Add reported patches to the database
 
-    for update in "${1[@]}" 
+    for update in "${updates[@]}" 
     do
         sqlite3 ${DB_FILE} "insert into data (patch) values (\"${update}\");" 
     done
@@ -226,31 +256,39 @@ if [[ "${RESULT}" =~ "Inst" ]]; then
     # Create an array containing all updates, one per array member
     AVAILABLE_UPDATES=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'|cut -c 6-))
     
-    declare -a UNREPORTED_UPDATES
+    declare -a UNREPORTED_UPDATES SKIPPED_UPDATES
 
     for update in "${AVAILABLE_UPDATES[@]}" 
     do
         # Check to see if the patch has been previously reported
         if $(is_patch_already_reported ${update}); then
 
-            # Skip the update
-            if [[ "${DEBUG_ON}" -ne 0 ]]; then                
-                echo "[S] ${update}"
+            # Skip the update, but log it for troubleshooting purposes
+            SKIPPED_UPDATES=("${SKIPPED_UPDATES[@]}" "${update}")
+
+            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then                
+                echo "[SKIP] ${update}"
             fi
+            
         else
             # Add the update to an array to be reported
+            # FIXME: There is a bug here that results in a duplicate item
             UNREPORTED_UPDATES=("${UNREPORTED_UPDATES[@]}" "${update}")
             
-            if [[ "${DEBUG_ON}" -ne 0 ]]; then                
-                echo "[I] ${update}"
+            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then                
+                echo "[INCL] ${update}"
             fi            
         fi
     done
 
-    # FIXME: Will the internal $1 var be a copy of the passed array?
-    report_patches ${UNREPORTED_UPDATES[@]}
+    print_patch_arrays
+
+    # If we're not in debug mode, send an email
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        email_report "${UNREPORTED_UPDATES[@]}"        
+    fi
     
-    # record_reported_patches ${UNREPORTED_UPDATES[@]}
+    record_reported_patches "${UNREPORTED_UPDATES[@]}"
 
 fi
 
