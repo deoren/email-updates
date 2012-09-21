@@ -15,6 +15,7 @@
 #   * http://stackoverflow.com/questions/5431909/bash-functions-return-boolean-to-be-used-in-if
 #   * http://mywiki.wooledge.org/BashPitfalls
 #   * http://stackoverflow.com/questions/1063347/passing-arrays-as-parameters-in-bash
+#   * http://wiki.bash-hackers.org/commands/classictest
 
 
 #########################
@@ -39,6 +40,11 @@ EMAIL_TAG_PROJECT="server-support"
 EMAIL_TAG_CATEGORY="Patch"
 EMAIL_TAG_STATUS="Assigned"
 
+# Set this to a valid email address if you want to have this
+# report appear to come from that address.
+SENDER_EMAIL=""
+
+# Where should the email containing the list of updates go?
 DEST_EMAIL="updates-notification@example.org"
 TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=$(date "+%B %d %Y")
@@ -213,7 +219,14 @@ email_report() {
     echo "Status: ${EMAIL_TAG_STATUS}" >> ${TEMP_FILE}
 
     # Send the report via email
-    mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+    # If user chose to masquerade this email as a specific user, set the value
+    if [[ ! -z ${SENDER_EMAIL} ]]; then
+        mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+    else
+        # otherwise, just use whatever user account this script runs as
+        # (which is usually root)
+        mail -s "${EMAIL_SUBJECT}" --append=FROM:${SENDER_EMAIL} ${DEST_EMAIL} < ${TEMP_FILE}
+    fi
 
 }
 
