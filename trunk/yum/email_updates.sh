@@ -38,10 +38,29 @@ VERBOSE_DEBUG_ON=0
 SKIP_UPSTREAM_SYNC=0
 
 # Matching on any of these patterns or "update types" that are found at
+# the end of a line when running "up2date --list".
+# If any are present, it is assumed that at least one update is available
+# for installation.
+# Example lines (not the trailing space on i386 item):
+# bind-utils                              9.2.4               39.el4              i386  
+# tzdata                                  2012c               3.el4               noarch
+UP2DATE_MATCH_ON='i386[[:space:]]*$|noarch[[:space:]]*$'
+
+# Matching on any of these patterns or "update types" that are found at
 # the end of a line when running "yum check-update".
 # If any are present, it is assumed that at least one update is available
 # for installation.
-MATCH_ON='rhel-.-server-rpms[[:space:]]*$|base[[:space:]]*$|updates?[[:space:]]*$|lockss[[:space:]]*$'
+YUM_MATCH_ON='rhel-.-server-rpms[[:space:]]*$|base[[:space:]]*$|updates?[[:space:]]*$|lockss[[:space:]]*$'
+
+# Used to determine whether up2date, yum or apt-get should be used to
+# calculate the available updates
+MATCH_RHEL4='Red Hat Enterprise Linux.*4'
+MATCH_RHEL5='Red Hat Enterprise Linux.*5'
+MATCH_UBUNTU='Ubuntu'
+MATCH_CENTOS='CentOS'
+
+# Mash the contents into a single string - not creating an array via ()
+RELEASE_INFO=$(cat /etc/*release)
 
 # Just in case it's not already there (for sqlite3)
 PATH="${PATH}:/usr/bin"
@@ -261,20 +280,91 @@ record_reported_patches() {
 
 sync_packages_list () {
 
-    # Update cache of available packages for the OS
-    # Later yum calls will work with the updated cache
-    # FIXME: How to handle hung update checks?
-    yum check-update > /dev/null
+    # Update index of available packages for the OS
+
+    THIS_DISTRO=$(detect_supported_distros)
+
+    case "${THIS_DISTRO}" in
+        up2date )
+            # FIXME: There isn't a "run from cache" option to use later on that
+            #        I am aware of, so we'll just do a single run later
+            :
+            ;;
+        apt )
+            # Skip upstream sync unless running in production mode
+            if [[ "${SKIP_UPSTREAM_SYNC}" -eq 0 ]]; then
+                apt-get update > /dev/null
+            fi
+            ;;
+        yum )
+            yum check-update > /dev/null
+            ;;
+    esac
+
+}
+
+
+detect_supported_distros () {
+
+    if [[ "${RELEASE_INFO}" =~ ${MATCH_RHEL4} ]]; then
+        echo "up2date"
+    fi
+
+    if [[ "${RELEASE_INFO}" =~ ${MATCH_RHEL5} ]]; then
+        echo "yum"
+    fi
+
+    if [[ "${RELEASE_INFO}" =~ ${MATCH_CENTOS} ]]; then
+        echo "yum"
+    fi
+
+    if [[ "${RELEASE_INFO}" =~ ${MATCH_UBUNTU} ]]; then
+        echo "apt"
+    fi
+
+}
+
+
+calculate_updates_via_up2date() {
+
+    # All output from this function is captured and assigned to an array
+    up2date --list | grep -i -E -w "${UP2DATE_MATCH_ON}"
+
+}
+
+
+calculate_updates_via_yum() {
+
+    # All output from this function is captured and assigned to an array
+    yum check-update -C | grep -i -E -w "${YUM_MATCH_ON}"
+
+}
+
+
+calculate_updates_via_apt() {
+
+    # All output from this function is captured and assigned to an array
+    apt-get dist-upgrade -s | grep -iE '^Inst.*$'| cut -c 6-
 
 }
 
 
 calculate_updates_available () {
 
-    # Note: All output from this function is captured 
-    # and assigned to an array
-    yum check-update -C | grep -i -E -w "${MATCH_ON}"
+    THIS_DISTRO=$(detect_supported_distros)
+
+    case "${THIS_DISTRO}" in
+        up2date ) calculate_updates_via_up2date
+            ;;
+        apt     ) calculate_updates_via_apt
+            ;;
+        yum     ) calculate_updates_via_yum
+            ;;
+    esac
+
+
 }
+
 
 #############################
 # Setup
