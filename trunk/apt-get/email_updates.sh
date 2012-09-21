@@ -212,6 +212,8 @@ email_report() {
         echo "${update}" >> ${TEMP_FILE}
     done
 
+    echo " " >> ${TEMP_FILE}
+
     # Tag report with Redmine compliant keywords
     # http://www.redmine.org/projects/redmine/wiki/RedmineReceivingEmails
     echo "Project: ${EMAIL_TAG_PROJECT}" >> ${TEMP_FILE}
