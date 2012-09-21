@@ -50,7 +50,7 @@ TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=$(date "+%B %d %Y")
 
 # Schema for database:
-DB_STRUCTURE="CREATE TABLE reported_updates (id INTEGER PRIMARY KEY, update TEXT, time TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')));"
+DB_STRUCTURE="CREATE TABLE reported_updates (id INTEGER PRIMARY KEY, package TEXT, time TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')));"
 
 # In which field in the database is patch information stored?
 DB_PATCH_FIELD=2
@@ -152,7 +152,7 @@ is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
 
-    query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE update = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
+    query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
 
     # See if the selected patch has already been reported
     if [[ "$query_result" == "${1}" ]]; then
@@ -242,7 +242,7 @@ record_reported_patches() {
 
     for update in "${updates[@]}"
     do
-        sqlite3 ${DB_FILE} "INSERT INTO reported_updates (update) VALUES (\"${update}\");"
+        sqlite3 ${DB_FILE} "INSERT INTO reported_updates (package) VALUES (\"${update}\");"
     done
 
 }
