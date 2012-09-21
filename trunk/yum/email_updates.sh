@@ -66,7 +66,7 @@ DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAM
 # In which field in the database is patch information stored?
 DB_PATCH_FIELD=2
 
-DB_FILE="/var/cache/email_updates/reported_patches.db"
+DB_FILE="/var/cache/email_updates/reported_updates.db"
 
 # FIXME: Create Bash function instead of using external dirname tool?
 DB_FILE_DIR=$(dirname ${DB_FILE})
