@@ -223,11 +223,11 @@ email_report() {
     # Send the report via email
     # If user chose to masquerade this email as a specific user, set the value
     if [[ ! -z ${SENDER_EMAIL} ]]; then
-        mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+        mail -s "${EMAIL_SUBJECT}" --append=FROM:${SENDER_EMAIL} ${DEST_EMAIL} < ${TEMP_FILE}
     else
         # otherwise, just use whatever user account this script runs as
         # (which is usually root)
-        mail -s "${EMAIL_SUBJECT}" --append=FROM:${SENDER_EMAIL} ${DEST_EMAIL} < ${TEMP_FILE}
+        mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
     fi
 
 }
