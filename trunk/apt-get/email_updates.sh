@@ -242,7 +242,7 @@ record_reported_patches() {
 
     for update in "${updates[@]}"
     do
-        sqlite3 ${DB_FILE} "insert into reported_updates (update) values (\"${update}\");"
+        sqlite3 ${DB_FILE} "INSERT INTO reported_updates (update) VALUES (\"${update}\");"
     done
 
 }
