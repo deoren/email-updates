@@ -50,7 +50,7 @@ TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=$(date "+%B %d %Y")
 
 # Schema for database:
-DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+DB_STRUCTURE="CREATE TABLE data (id INTEGER PRIMARY KEY,patch TEXT,time TIMESTAMP NOT NULL DEFAULT (datetime('now','localtime')));"
 
 # In which field in the database is patch information stored?
 DB_PATCH_FIELD=2
