@@ -51,6 +51,11 @@ EMAIL_TAG_PROJECT="server-support"
 EMAIL_TAG_CATEGORY="Patch"
 EMAIL_TAG_STATUS="Assigned"
 
+# Set this to a valid email address if you want to have this
+# report appear to come from that address.
+SENDER_EMAIL=""
+
+# Where should the email containing the list of updates go?
 DEST_EMAIL="updates-notification@example.org"
 TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=$(date "+%B %d %Y")
@@ -218,6 +223,8 @@ email_report() {
         echo "${update}" >> ${TEMP_FILE}
     done
 
+    echo " " >> ${TEMP_FILE}
+
     # Tag report with Redmine compliant keywords
     # http://www.redmine.org/projects/redmine/wiki/RedmineReceivingEmails
     echo "Project: ${EMAIL_TAG_PROJECT}" >> ${TEMP_FILE}
@@ -225,7 +232,14 @@ email_report() {
     echo "Status: ${EMAIL_TAG_STATUS}" >> ${TEMP_FILE}
 
     # Send the report via email
-    mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+    # If user chose to masquerade this email as a specific user, set the value
+    if [[ ! -z ${SENDER_EMAIL} ]]; then
+        mail -s "${EMAIL_SUBJECT}" --append=FROM:${SENDER_EMAIL} ${DEST_EMAIL} < ${TEMP_FILE}
+    else
+        # otherwise, just use whatever user account this script runs as
+        # (which is usually root)
+        mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+    fi
 
 }
 
