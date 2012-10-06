@@ -357,7 +357,7 @@ calculate_updates_via_yum() {
     for update in ${updates_array[@]}
     do
         update_line_reduced_spaces=($(echo ${update} | grep -Eio "${UPDATE_PKG_REGEX}"))
-        echo ${update_line_reduced_spaces}
+        echo ${update_line_reduced_spaces[@]}
     done
 }
 
