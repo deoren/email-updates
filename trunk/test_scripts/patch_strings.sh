@@ -12,6 +12,9 @@
 # http://stackoverflow.com/questions/2777579/sed-group-capturing
 # http://stackoverflow.com/questions/6326049/grep-capture-regex
 
+# Great tool:
+# http://rubular.com/
+
 
 
 regex="[a-zA-z_0-9.-]+"
