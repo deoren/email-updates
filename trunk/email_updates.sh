@@ -198,7 +198,7 @@ is_patch_already_reported() {
 
     for update in ${previously_reported_updates[@]}
     do
-        tmp_array=($(echo ${query_result} | grep -Eio "${UPDATE_PKG_REGEX}"))
+        tmp_array=($(echo ${update} | grep -Eio "${UPDATE_PKG_REGEX}"))
         stripped_query_string=$(echo ${tmp_array[@]})
 
         # See if the selected patch has already been reported
