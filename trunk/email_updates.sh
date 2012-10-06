@@ -59,6 +59,11 @@ MATCH_RHEL5='Red Hat Enterprise Linux.*5'
 MATCH_UBUNTU='Ubuntu'
 MATCH_CENTOS='CentOS'
 
+# A regex that should work for all package names. Mainly used for collapsing
+# update strings with multiple spaces into a string with only one space
+# between the fields
+UPDATE_PKG_REGEX="[a-zA-z_0-9.-]+"
+
 # Mash the contents into a single string - not creating an array via ()
 RELEASE_INFO=$(cat /etc/*release)
 
@@ -184,8 +189,14 @@ is_patch_already_reported() {
 
     query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
 
+    # The query_result string could contain an update string with
+    # extraneous spaces. We'll need to collapse those spaces to just one
+    # between each field for comparison
+    tmp_array=($(echo ${query_result} | grep -Eio "${UPDATE_PKG_REGEX}"))
+    stripped_query_string=$(echo ${tmp_array[@]})
+
     # See if the selected patch has already been reported
-    if [[ "$query_result" == "${1}" ]]; then
+    if [[ "$stripped_query_string" == "${1}" ]]; then
         # Report a match
         return 0
     else
@@ -336,8 +347,18 @@ calculate_updates_via_up2date() {
 calculate_updates_via_yum() {
 
     # All output from this function is captured and assigned to an array
-    yum check-update -C | grep -i -E -w "${YUM_MATCH_ON}"
+    updates_array=($(yum check-update -C | grep -i -E -w "${YUM_MATCH_ON}"))
 
+    # This process removes extraneous spaces from update strings in order to
+    # change something like this:
+    # xorg-x11-server-Xnest.i386              1.1.1-48.91.el5_8.2               update
+    # into this:
+    # xorg-x11-server-Xnest.i386 1.1.1-48.91.el5_8.2 update
+    for update in ${updates_array[@]}
+    do
+        update_line_reduced_spaces=($(echo ${update} | grep -Eio "${UPDATE_PKG_REGEX}"))
+        echo ${update_line_reduced_spaces}
+    done
 }
 
 
