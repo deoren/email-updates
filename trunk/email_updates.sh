@@ -193,16 +193,19 @@ is_patch_already_reported() {
     # extraneous spaces. We'll need to collapse those spaces to just one
     # between each field for comparison, and the only way I know how to do
     # this at present is to return ALL results from the 'package' column
-    
-    previously_reported_updates=($(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates" | cut -d '|' -f 2)) 
+
+    # Since we're returning all values, I'm hoping that by comparing from the 
+    # most recently reported patches will speed up the process if an update
+    # has been previously reported.
+    previously_reported_updates=($(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates ORDER BY time DESC" | cut -d '|' -f 2)) 
 
     for update in ${previously_reported_updates[@]}
     do
         tmp_array=($(echo ${update} | grep -Eio "${UPDATE_PKG_REGEX}"))
-        stripped_query_string=$(echo ${tmp_array[@]})
+        stripped_update_string=$(echo ${tmp_array[@]})
 
         # See if the selected patch has already been reported
-        if [[ "$stripped_query_string" == "${1}" ]]; then
+        if [[ "$stripped_update_string" == "${1}" ]]; then
             # Report a match, and exit loop
             return 0
         fi
