@@ -187,22 +187,29 @@ is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
 
-    query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
+    #query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
 
     # The query_result string could contain an update string with
     # extraneous spaces. We'll need to collapse those spaces to just one
-    # between each field for comparison
-    tmp_array=($(echo ${query_result} | grep -Eio "${UPDATE_PKG_REGEX}"))
-    stripped_query_string=$(echo ${tmp_array[@]})
+    # between each field for comparison, and the only way I know how to do
+    # this at present is to return ALL results from the 'package' column
+    
+    previously_reported_updates=($(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates" | cut -d '|' -f 2)) 
 
-    # See if the selected patch has already been reported
-    if [[ "$stripped_query_string" == "${1}" ]]; then
-        # Report a match
-        return 0
-    else
-        # Report no match
-        return 1
-    fi
+    for update in ${previously_reported_updates[@]}
+    do
+        tmp_array=($(echo ${query_result} | grep -Eio "${UPDATE_PKG_REGEX}"))
+        stripped_query_string=$(echo ${tmp_array[@]})
+
+        # See if the selected patch has already been reported
+        if [[ "$stripped_query_string" == "${1}" ]]; then
+            # Report a match, and exit loop
+            return 0
+        fi
+    done
+    
+    # If we get this far, report no match
+    return 1
 }
 
 
