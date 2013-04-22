@@ -458,7 +458,11 @@ if [[ ${#AVAILABLE_UPDATES[@]} -gt 0 ]]; then
         fi
     done
 
-    print_patch_arrays
+    # Only print out the list of unreported and skipped updates if we're in
+    # debug mode.
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        print_patch_arrays
+    fi
 
     # If we're not in debug mode, send an email
     if [[ "${DEBUG_ON}" -eq 0 ]]; then
