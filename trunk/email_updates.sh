@@ -59,11 +59,6 @@ MATCH_RHEL5='Red Hat Enterprise Linux.*5'
 MATCH_UBUNTU='Ubuntu'
 MATCH_CENTOS='CentOS'
 
-# A regex that should work for all package names. Mainly used for collapsing
-# update strings with multiple spaces into a string with only one space
-# between the fields
-UPDATE_PKG_REGEX="[a-zA-z_0-9.-]+"
-
 # Mash the contents into a single string - not creating an array via ()
 RELEASE_INFO=$(cat /etc/*release)
 
@@ -186,6 +181,7 @@ initialize_db() {
 is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
+    patch_to_check="${1}"
 
     #query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
 
@@ -199,13 +195,15 @@ is_patch_already_reported() {
     # has been previously reported.
     previously_reported_updates=($(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates ORDER BY time DESC" | cut -d '|' -f 2)) 
 
-    for update in ${previously_reported_updates[@]}
+    for previously_reported_update in ${previously_reported_updates[@]}
     do
-        tmp_array=($(echo ${update} | grep -Eio "${UPDATE_PKG_REGEX}"))
-        stripped_update_string=$(echo ${tmp_array[@]})
+        # Collapse arrays (or strings with multiple spaces) back into
+        # single strings with max of one space between characters
+        stripped_prev_reported_update=$(echo ${previously_reported_update} | sed 's/  //g')
+        stripped_patch_to_check=$(echo ${patch_to_check} | sed 's/  //g')
 
         # See if the selected patch has already been reported
-        if [[ "$stripped_update_string" == "${1}" ]]; then
+        if [[ "${stripped_prev_reported_update}" == "${stripped_patch_to_check}" ]]; then
             # Report a match, and exit loop
             return 0
         fi
@@ -366,8 +364,8 @@ calculate_updates_via_yum() {
     # xorg-x11-server-Xnest.i386 1.1.1-48.91.el5_8.2 update
     for update in ${updates_array[@]}
     do
-        update_line_reduced_spaces=($(echo ${update} | grep -Eio "${UPDATE_PKG_REGEX}"))
-        echo ${update_line_reduced_spaces[@]}
+        # Use sed to replace two spaces with none, repeat until finished
+        echo ${update} | sed 's/  //g'
     done
 }
 
