@@ -199,8 +199,8 @@ is_patch_already_reported() {
     do
         # Collapse arrays (or strings with multiple spaces) back into
         # single strings with max of one space between characters
-        stripped_prev_reported_update=$(echo ${previously_reported_update} | sed 's/  //g')
-        stripped_patch_to_check=$(echo ${patch_to_check} | sed 's/  //g')
+        stripped_prev_reported_update=$(echo ${previously_reported_update} | sed 's/  / /g')
+        stripped_patch_to_check=$(echo ${patch_to_check} | sed 's/  / /g')
 
         # See if the selected patch has already been reported
         if [[ "${stripped_prev_reported_update}" == "${stripped_patch_to_check}" ]]; then
@@ -364,8 +364,8 @@ calculate_updates_via_yum() {
     # xorg-x11-server-Xnest.i386 1.1.1-48.91.el5_8.2 update
     for update in ${updates_array[@]}
     do
-        # Use sed to replace two spaces with none, repeat until finished
-        echo ${update} | sed 's/  //g'
+        # Use sed to replace two spaces with one, repeat until finished
+        echo ${update} | sed 's/  / /g'
     done
 }
 
