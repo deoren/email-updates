@@ -283,10 +283,8 @@ email_report() {
     # If we're to include host specific info ...
     if [[ "${EMAIL_INCLUDE_HOST_INFO}" -ne 0 ]]; then
 
-        echo -e "\n" >> ${TEMP_FILE}
-
-        echo $(hostname -f) >> ${TEMP_FILE}
-
+        echo -e "\nHostname: $(hostname -f)" >> ${TEMP_FILE}
+        echo -e "\nIP Address(es):\n----------------------------------" >> ${TEMP_FILE}
         # FIXME: This is ugly, but works on RHEL5 and newer
         echo $(ifconfig | grep -Po "${MATCH_IFCONFIG_FULL}" | grep -v '127.0.0' | grep -Po "${MATCH_IFCONFIG_IPS_ONLY}") >> ${TEMP_FILE}
 
