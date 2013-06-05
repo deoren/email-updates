@@ -288,7 +288,7 @@ email_report() {
         echo $(hostname -f) >> ${TEMP_FILE}
 
         # FIXME: This is ugly, but works on RHEL5 and newer
-        echo $(ifconfig | grep -Po "${MATCH_IFCONFIG_FULL}" | grep -v '127.0.0' | "${MATCH_IFCONFIG_IPS_ONLY}") >> ${TEMP_FILE}
+        echo $(ifconfig | grep -Po "${MATCH_IFCONFIG_FULL}" | grep -v '127.0.0' | grep -Po "${MATCH_IFCONFIG_IPS_ONLY}") >> ${TEMP_FILE}
 
     fi
 
