@@ -72,7 +72,7 @@ EMAIL_TAG_STATUS="Assigned"
 
 # Set this to a valid email address if you want to have this
 # report appear to come from that address.
-SENDER_EMAIL=""
+EMAIL_SENDER=""
 
 # Where should the email containing the list of updates go?
 DEST_EMAIL="updates-notification@example.org"
@@ -271,8 +271,8 @@ email_report() {
 
     # Send the report via email
     # If user chose to masquerade this email as a specific user, set the value
-    if [[ ! -z ${SENDER_EMAIL} ]]; then
-        mail -s "${EMAIL_SUBJECT}" --append=FROM:${SENDER_EMAIL} ${DEST_EMAIL} < ${TEMP_FILE}
+    if [[ ! -z ${EMAIL_SENDER} ]]; then
+        mail -s "${EMAIL_SUBJECT}" --append=FROM:${EMAIL_SENDER} ${DEST_EMAIL} < ${TEMP_FILE}
     else
         # otherwise, just use whatever user account this script runs as
         # (which is usually root)
