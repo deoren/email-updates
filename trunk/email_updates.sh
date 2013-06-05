@@ -59,6 +59,10 @@ MATCH_RHEL5='Red Hat Enterprise Linux.*5'
 MATCH_UBUNTU='Ubuntu'
 MATCH_CENTOS='CentOS'
 
+# Used when providing host info via email (if enabled)
+MATCH_IFCONFIG_FULL='^\s+inet addr:[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+'
+MATCH_IFCONFIG_IPS_ONLY='[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+' 
+
 # Mash the contents into a single string - not creating an array via ()
 RELEASE_INFO=$(cat /etc/*release)
 
@@ -76,6 +80,13 @@ EMAIL_SENDER=""
 
 # Where should the email containing the list of updates go?
 EMAIL_DEST="updates-notification@example.org"
+
+# Should we include the IP Address and full hostname of the system sending
+# the email? This could be useful if this script is deployed on a system
+# that is being prepped to replace another one (i.e., same hostname).
+EMAIL_INCLUDE_HOST_INFO="1"
+
+
 TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=$(date "+%B %d %Y")
 
@@ -268,6 +279,18 @@ email_report() {
     echo "Project: ${EMAIL_TAG_PROJECT}" >> ${TEMP_FILE}
     echo "Category: ${EMAIL_TAG_CATEGORY}" >> ${TEMP_FILE}
     echo "Status: ${EMAIL_TAG_STATUS}" >> ${TEMP_FILE}
+
+    # If we're to include host specific info ...
+    if [[ "${EMAIL_INCLUDE_HOST_INFO}" -ne 0 ]]; then
+
+        echo -e "\n" >> ${TEMP_FILE}
+
+        echo $(hostname -f) >> ${TEMP_FILE}
+
+        # FIXME: This is ugly, but works on RHEL5 and newer
+        echo $(ifconfig | grep -Po "${MATCH_IFCONFIG_FULL}" | grep -v '127.0.0' | "${MATCH_IFCONFIG_IPS_ONLY}") >> ${TEMP_FILE}
+
+    fi
 
     # Send the report via email
     # If user chose to masquerade this email as a specific user, set the value
