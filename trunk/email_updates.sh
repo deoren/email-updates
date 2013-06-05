@@ -75,7 +75,7 @@ EMAIL_TAG_STATUS="Assigned"
 EMAIL_SENDER=""
 
 # Where should the email containing the list of updates go?
-DEST_EMAIL="updates-notification@example.org"
+EMAIL_DEST="updates-notification@example.org"
 TEMP_FILE="/tmp/updates_list_$$.tmp"
 TODAY=$(date "+%B %d %Y")
 
@@ -272,11 +272,11 @@ email_report() {
     # Send the report via email
     # If user chose to masquerade this email as a specific user, set the value
     if [[ ! -z ${EMAIL_SENDER} ]]; then
-        mail -s "${EMAIL_SUBJECT}" --append=FROM:${EMAIL_SENDER} ${DEST_EMAIL} < ${TEMP_FILE}
+        mail -s "${EMAIL_SUBJECT}" --append=FROM:${EMAIL_SENDER} ${EMAIL_DEST} < ${TEMP_FILE}
     else
         # otherwise, just use whatever user account this script runs as
         # (which is usually root)
-        mail -s "${EMAIL_SUBJECT}" ${DEST_EMAIL} < ${TEMP_FILE}
+        mail -s "${EMAIL_SUBJECT}" ${EMAIL_DEST} < ${TEMP_FILE}
     fi
 
 }
