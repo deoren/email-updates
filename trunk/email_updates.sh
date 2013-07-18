@@ -202,7 +202,7 @@ sanitize_string () {
     # It does this by replacing every instance of two spaces with one,
     # repeating until finished AND then replaces all leading spaces
 
-    echo ${1} | sed -r 's/[ \t ]{2,}//g' | sed -r 's/^\s+//'
+    echo ${1} | sed -r 's/[ \t ]{2,}/ /g' | sed -r 's/^\s+//'
 
 }
 
