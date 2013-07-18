@@ -188,6 +188,10 @@ initialize_db() {
 
 }
 
+# http://stackoverflow.com/a/2990533
+# Used to print to the screen from within functions that rely on returning data
+# to a variable via stdout
+echoerr() { echo "$@" 1>&2; }
 
 sanitize_string () {
 
@@ -407,16 +411,33 @@ calculate_updates_via_yum() {
     #       than something like this however:
     # sed -r 's/-[@]{0,1}(update|lockss|base|rhel-.-server-rpms|i386|noarch)[\s]{0,1}$//'
 
-    local -a RAW_UPDATES_ARRAY
+    local -a YUM_CHECKUPDATE_OUTPUT
+ 
+    # Capturing output in array so we can more easily filter out what we're not 
+    # interested in considering an "update"
+    YUM_CHECKUPDATE_OUTPUT=($(yum check-update -C))
+ 
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        echoerr "Contents of \"$YUM_CHECKUPDATE_OUTPUT\":"
+    fi
 
-    # Capture output in array so we can clean and return it
-    RAW_UPDATES_ARRAY=($(yum check-update -C | grep -i -E -w "${YUM_MATCH_ON}"))
+    for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
+     do
+        # If we've gotten this far it means we have passed all available
+        # updates and yum is telling us what old packages it will remove
+        if [[ "${line}" =~ "Obsoleting Packages" ]]; then
+            break
+        else
+            if [[ "${DEBUG_ON}" -ne 0 ]]; then
+                echoerr $line
+            fi
 
-    for update in "${RAW_UPDATES_ARRAY[@]}"
-    do
-        #Return cleaned up string
-        echo $(sanitize_string ${update})
-    done
+            # Filter out non-update lines, clean matches and return them
+            matched_update=$(echo ${line} | grep -i -E -w "${YUM_MATCH_ON}")
+            echo $(sanitize_string ${matched_update})
+        fi
+     done
+
 }
 
 
