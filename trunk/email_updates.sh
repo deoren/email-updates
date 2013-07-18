@@ -191,7 +191,7 @@ initialize_db() {
 # http://stackoverflow.com/a/2990533
 # Used to print to the screen from within functions that rely on returning data
 # to a variable via stdout
-echoerr() { echo "$@" 1>&2; }
+echoerr() { echo -e "$@" 1>&2; }
 
 sanitize_string () {
 
@@ -216,22 +216,26 @@ is_patch_already_reported() {
     # By this point it should have already been cleaned by sanitize_string()
     patch_to_check="${1}"
 
-    #query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
+    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+        echoerr "\n[I] Checking \"$1\" against previously reported updates ..."
+    fi
 
-    # The query_result string could contain an update string with
-    # extraneous spaces. We'll need to collapse those spaces to just one
-    # between each field for comparison, and the only way I know how to do
-    # this at present is to return ALL results from the 'package' column
+    # Rely on the sanitized string having fields separated by spaces so we can 
+    # grab the first field (no version info) and use that as a search term
+    package_prefix=$(echo ${1} | cut -d' ' -f 1)
 
-    # Since we're returning all values, I'm hoping that by comparing from the 
-    # most recently reported patches will speed up the process if an update
-    # has been previously reported.
-    previously_reported_updates=($(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates ORDER BY time DESC" | cut -d '|' -f 2)) 
+    sql_query_match_first_field="SELECT * FROM reported_updates WHERE package LIKE '${package_prefix}%' ORDER BY time DESC"
+
+    previously_reported_updates=($(sqlite3 "${DB_FILE}" "${sql_query_match_first_field}" | cut -d '|' -f 2)) 
 
     for previously_reported_update in ${previously_reported_updates[@]}
     do
-        # Strip multiple spaces from strings so we can accurately compare them
-        # 
+        if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
+            echoerr "[I] SQL QUERY MATCH:" $previously_reported_update
+        fi
+
+        # Assume that old database entries may need multiple spaces 
+        # stripped from strings so we can accurately compare them
         stripped_prev_reported_update=$(sanitize_string ${previously_reported_update})
 
         # See if the selected patch has already been reported
