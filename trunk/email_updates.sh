@@ -354,7 +354,10 @@ sync_packages_list () {
             fi
             ;;
         yum )
-            yum check-update > /dev/null
+            # Skip upstream sync unless running in production mode
+            if [[ "${SKIP_UPSTREAM_SYNC}" -eq 0 ]]; then
+                yum check-update > /dev/null
+            fi
             ;;
     esac
 
