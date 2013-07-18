@@ -193,6 +193,16 @@ initialize_db() {
 # to a variable via stdout
 echoerr() { echo -e "$@" 1>&2; }
 
+# NOTE: This is a stub entry for later use (see #112).
+match_update_string () {
+
+    # The logic is that if the string has a number in it, it must be an update
+    # string
+    grep -i -E "[0-9]"
+
+}
+
+
 sanitize_string () {
 
     # This process removes extraneous spaces from update strings in order to
@@ -207,6 +217,17 @@ sanitize_string () {
     # repeating until finished AND then replaces all leading spaces
 
     echo ${1} | sed -r 's/[ \t ]{2,}/ /g' | sed -r 's/^\s+//'
+
+    
+    # NOTE: This is a stub entry for later use (see #112).
+    
+    # yum check-update -C \
+       # | grep -i -E "[0-9]" \
+       # | tr -s ' ' \
+       # | sed -r 's/^\s+//g' \
+       # | cut -d' ' -f1,2 \
+       # | sed -r 's/\s/-/g'
+
 
 }
 
