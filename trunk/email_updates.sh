@@ -189,9 +189,27 @@ initialize_db() {
 }
 
 
+sanitize_string () {
+
+    # This process removes extraneous spaces from update strings in order to
+    # change something like this:
+    #
+    # xorg-x11-server-Xnest.i386              1.1.1-48.91.el5_8.2               update
+    #
+    # into this:
+    # xorg-x11-server-Xnest.i386 1.1.1-48.91.el5_8.2 update
+    #
+    # It does this by replacing every instance of two spaces with one,
+    # repeating until finished AND then replaces all leading spaces
+
+    echo ${1} | sed -r 's/[ \t ]{2,}//g' | sed -r 's/^\s+//'
+
+}
+
 is_patch_already_reported() {
 
     # $1 should equal the quoted patch that we're checking
+    # By this point it should have already been cleaned by sanitize_string()
     patch_to_check="${1}"
 
     #query_result=$(sqlite3 "${DB_FILE}" "SELECT * FROM reported_updates WHERE package = \"$1\";" | cut -d '|' -f ${DB_PATCH_FIELD})
@@ -208,13 +226,12 @@ is_patch_already_reported() {
 
     for previously_reported_update in ${previously_reported_updates[@]}
     do
-        # Collapse arrays (or strings with multiple spaces) back into
-        # single strings with max of one space between characters
-        stripped_prev_reported_update=$(echo ${previously_reported_update} | sed 's/  / /g')
-        stripped_patch_to_check=$(echo ${patch_to_check} | sed 's/  / /g')
+        # Strip multiple spaces from strings so we can accurately compare them
+        # 
+        stripped_prev_reported_update=$(sanitize_string ${previously_reported_update})
 
         # See if the selected patch has already been reported
-        if [[ "${stripped_prev_reported_update}" == "${stripped_patch_to_check}" ]]; then
+        if [[ "${stripped_prev_reported_update}" == "${patch_to_check}" ]]; then
             # Report a match, and exit loop
             return 0
         fi
@@ -367,34 +384,50 @@ detect_supported_distros () {
 
 calculate_updates_via_up2date() {
 
-    # All output from this function is captured and assigned to an array
-    up2date --list | grep -i -E -w "${UP2DATE_MATCH_ON}"
+    local -a RAW_UPDATES_ARRAY
+
+    # Capture output in array so we can clean and return it
+    RAW_UPDATES_ARRAY=($(up2date --list | grep -i -E -w "${UP2DATE_MATCH_ON}"))
+
+    for update in "${RAW_UPDATES_ARRAY[@]}"
+    do
+        # Return cleaned up string
+        echo $(sanitize_string ${update})
+    done
 
 }
 
 
 calculate_updates_via_yum() {
 
-    # All output from this function is captured and assigned to an array
-    updates_array=($(yum check-update -C | grep -i -E -w "${YUM_MATCH_ON}"))
+    # TODO: Consider trimming trailing update type. I'll need a better approach
+    #       than something like this however:
+    # sed -r 's/-[@]{0,1}(update|lockss|base|rhel-.-server-rpms|i386|noarch)[\s]{0,1}$//'
 
-    # This process removes extraneous spaces from update strings in order to
-    # change something like this:
-    # xorg-x11-server-Xnest.i386              1.1.1-48.91.el5_8.2               update
-    # into this:
-    # xorg-x11-server-Xnest.i386 1.1.1-48.91.el5_8.2 update
-    for update in ${updates_array[@]}
+    local -a RAW_UPDATES_ARRAY
+
+    # Capture output in array so we can clean and return it
+    RAW_UPDATES_ARRAY=($(yum check-update -C | grep -i -E -w "${YUM_MATCH_ON}"))
+
+    for update in "${RAW_UPDATES_ARRAY[@]}"
     do
-        # Use sed to replace two spaces with one, repeat until finished
-        echo ${update} | sed 's/  / /g'
+        #Return cleaned up string
+        echo $(sanitize_string ${update})
     done
 }
 
 
 calculate_updates_via_apt() {
+    local -a RAW_UPDATES_ARRAY
 
-    # All output from this function is captured and assigned to an array
-    apt-get dist-upgrade -s | grep -iE '^Inst.*$'| cut -c 6-
+    # Capture output in array so we can clean and return it
+    RAW_UPDATES_ARRAY=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'| cut -c 6-))
+    
+    for update in "${RAW_UPDATES_ARRAY[@]}"
+    do
+        # Return cleaned up string
+        echo $(sanitize_string ${update})
+    done
 
 }
 
