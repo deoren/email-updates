@@ -6,7 +6,7 @@
 # Purpose:
 #   This script is intended to be run once daily to report any patches
 #   available for the OS. If a particular patch has been reported previously
-#   the goal is to NOT report it again unless requested (via FLAG).
+#   the goal is to NOT report it again (TODO: unless requested via FLAG).
 
 # Compatiblity notes:
 #  * This script needs to be compatible with:
@@ -36,21 +36,6 @@ VERBOSE_DEBUG_ON=0
 
 # Useful for testing where we don't want to bang on upstream servers too much
 SKIP_UPSTREAM_SYNC=0
-
-# Matching on any of these patterns or "update types" that are found at
-# the end of a line when running "up2date --list".
-# If any are present, it is assumed that at least one update is available
-# for installation.
-# Example lines (not the trailing space on i386 item):
-# bind-utils                              9.2.4               39.el4              i386  
-# tzdata                                  2012c               3.el4               noarch
-UP2DATE_MATCH_ON='i386[[:space:]]*$|noarch[[:space:]]*$'
-
-# Matching on any of these patterns or "update types" that are found at
-# the end of a line when running "yum check-update".
-# If any are present, it is assumed that at least one update is available
-# for installation.
-YUM_MATCH_ON='rhel-.-server-rpms[[:space:]]*$|base[[:space:]]*$|updates?[[:space:]]*$|lockss[[:space:]]*$'
 
 # Used to determine whether up2date, yum or apt-get should be used to
 # calculate the available updates
@@ -193,41 +178,35 @@ initialize_db() {
 # to a variable via stdout
 echoerr() { echo -e "$@" 1>&2; }
 
-# NOTE: This is a stub entry for later use (see #112).
-match_update_string () {
-
-    # The logic is that if the string has a number in it, it must be an update
-    # string
-    grep -i -E "[0-9]"
-
-}
-
-
 sanitize_string () {
 
     # This process removes extraneous spaces from update strings in order to
-    # change something like this:
+    # change lines like these:
     #
     # xorg-x11-server-Xnest.i386              1.1.1-48.91.el5_8.2               update
+    # libxml2-dev [2.7.6.dfsg-1ubuntu1.9] (2.7.6.dfsg-1ubuntu1.10 Ubuntu:10.04/lucid-updates) []
     #
-    # into this:
-    # xorg-x11-server-Xnest.i386 1.1.1-48.91.el5_8.2 update
+    # into lines like these:
+    # xorg-x11-server-Xnest.i386-1.1.1-48.91.el5_8.2
+    # libxml2-dev-2.7.6.dfsg-1ubuntu1.9
     #
-    # It does this by replacing every instance of two spaces with one,
-    # repeating until finished AND then replaces all leading spaces
+    # It does this by:
+    # ------------------------------------------------------------------------
+    #  #1) Filtering out lines that do not include numbers (they're not kept)
+    #  #2) Replacing instances of multiple spaces with only one instance
+    #  #3) Using a single space as a delimiter, grab fields 1 and 2
+    #  #4) Replace any of '[', ']', '(', ')' or a leading spaces with nothing
+    #  #5) Replace the first space encountered with a '-' character
+    # ------------------------------------------------------------------------
 
-    echo ${1} | sed -r 's/[ \t ]{2,}/ /g' | sed -r 's/^\s+//'
-
-    
-    # NOTE: This is a stub entry for later use (see #112).
-    
-    # yum check-update -C \
-       # | grep -i -E "[0-9]" \
-       # | tr -s ' ' \
-       # | sed -r 's/^\s+//g' \
-       # | cut -d' ' -f1,2 \
-       # | sed -r 's/\s/-/g'
-
+    if $(echo "${1}" | grep -qE '[0-9]'); then
+        echo "${1}" \
+            | grep -Ev '^[:blank:]{1,}$' \
+            | tr -s ' ' \
+            | cut -d' ' -f1,2 \
+            | sed -r 's/([][(\)]|^\s)//g' \
+            | sed -r 's/ /-/'
+    fi
 
 }
 
@@ -432,34 +411,26 @@ calculate_updates_via_up2date() {
 
 calculate_updates_via_yum() {
 
-    # TODO: Consider trimming trailing update type. I'll need a better approach
-    #       than something like this however:
-    # sed -r 's/-[@]{0,1}(update|lockss|base|rhel-.-server-rpms|i386|noarch)[\s]{0,1}$//'
-
-    local -a YUM_CHECKUPDATE_OUTPUT
+    declare -a YUM_CHECKUPDATE_OUTPUT
  
-    # Capturing output in array so we can more easily filter out what we're not 
-    # interested in considering an "update"
+    # Capturing output in array so we can more easily filter out what we're not
+    # interested in considering an "update". Don't toss lines without a number
+    # yet; sanitize_string() handles that. We need "Obsoleting Packages"
+    # in place as a cut-off marker
     YUM_CHECKUPDATE_OUTPUT=($(yum check-update -C))
- 
-    if [[ "${DEBUG_ON}" -ne 0 ]]; then
-        echoerr "Contents of \"$YUM_CHECKUPDATE_OUTPUT\":"
-    fi
 
     for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
      do
         # If we've gotten this far it means we have passed all available
         # updates and yum is telling us what old packages it will remove
         if [[ "${line}" =~ "Obsoleting Packages" ]]; then
-            break
-        else
             if [[ "${DEBUG_ON}" -ne 0 ]]; then
-                echoerr $line
+                echoerr "Hit marker, breaking loop"
             fi
 
-            # Filter out non-update lines, clean matches and return them
-            matched_update=$(echo ${line} | grep -i -E -w "${YUM_MATCH_ON}")
-            echo $(sanitize_string ${matched_update})
+            break
+        else
+            echo $(sanitize_string ${line})
         fi
      done
 
@@ -470,8 +441,9 @@ calculate_updates_via_apt() {
     local -a RAW_UPDATES_ARRAY
 
     # Capture output in array so we can clean and return it
-    RAW_UPDATES_ARRAY=($(apt-get dist-upgrade -s | grep -iE '^Inst.*$'| cut -c 6-))
-    
+    # Using the follwing syntax mainly as a reminder that it's available
+    RAW_UPDATES_ARRAY=($(apt-get dist-upgrade -s | grep 'Inst' | cut -c 6-))
+
     for update in "${RAW_UPDATES_ARRAY[@]}"
     do
         # Return cleaned up string
