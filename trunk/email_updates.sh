@@ -201,7 +201,7 @@ sanitize_string () {
 
     if $(echo "${1}" | grep -qE '[0-9]'); then
         echo "${1}" \
-            | grep -Ev '^[:blank:]{1,}$' \
+            | grep -Ev '^[[:blank:]]{1,}$' \
             | tr -s ' ' \
             | cut -d' ' -f1,2 \
             | sed -r 's/([][(\)]|^\s)//g' \
