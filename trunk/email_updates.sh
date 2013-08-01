@@ -442,7 +442,7 @@ calculate_updates_via_apt() {
 
     # Capture output in array so we can clean and return it
     # Using the follwing syntax mainly as a reminder that it's available
-    RAW_UPDATES_ARRAY=($(apt-get dist-upgrade -s | grep 'Inst' | cut -c 6-))
+    RAW_UPDATES_ARRAY=($(apt-get dist-upgrade -s | grep 'Conf' | cut -c 6-))
 
     for update in "${RAW_UPDATES_ARRAY[@]}"
     do
