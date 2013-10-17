@@ -428,7 +428,7 @@ calculate_updates_via_yum() {
     # the one RHEL status message from stderr  that just mentions the system 
     # is receiving updates from Red Hat Subscription Management
     YUM_CHECKUPDATE_OUTPUT=(
-        $(yum check-update 2> >(grep -v 'This system is receiving')
+        $(yum check-update 2> >(grep -v 'This system is receiving'))
     )
 
     for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
