@@ -364,7 +364,15 @@ sync_packages_list () {
         yum )
             # Skip upstream sync unless running in production mode
             if [[ "${SKIP_UPSTREAM_SYNC}" -eq 0 ]]; then
-                yum check-update > /dev/null
+
+                # Fixes #120
+                #
+                # Toss stdout, but only toss the one RHEL status message from 
+                # stderr that just mentions the system is receiving updates
+                # from Red Hat Subscription Management
+                yum check-update 2> >(grep -v 'This system is receiving')  \
+                    > /dev/null
+
             fi
             ;;
     esac
