@@ -51,8 +51,11 @@ MATCH_IFCONFIG_IPS_ONLY='[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+'
 # Mash the contents into a single string - not creating an array via ()
 RELEASE_INFO=$(cat /etc/*release)
 
-# Just in case it's not already there (for sqlite3)
-PATH="${PATH}:/usr/bin"
+# Let's not rely on a crontab to be configured properly. Instead, let's go 
+# ahead and append to what's already set with the most important entries. 
+# PATH lookups are short-circuited on first match anyway, so lookup times
+# should be trivial.
+PATH="${PATH}:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Redmine tags
 EMAIL_TAG_PROJECT="server-support"
