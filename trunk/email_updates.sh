@@ -119,6 +119,9 @@ IFS=$'\n'
 
 # Allow overriding any of the predefined settings above
 # http://projects.whyaskwhy.org/projects/email-updates/wiki/Custom_Settings
+#
+# FIXME: Verify permissions first before importing file
+#
 if [ -f ${OVERRIDES_FILE} ]; then
     . ${OVERRIDES_FILE}
 fi
