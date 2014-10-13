@@ -15,6 +15,9 @@
 #  * Tested on RHELv5.x, CentOSv5.x & CentOSv6.x; basic update and LOCKSS repos
 
 # References:
+#
+#   * http://projects.whyaskwhy.org/projects/email-updates/wiki/Custom_Settings
+#
 #   * http://quickies.andreaolivato.net/post/133473114/using-sqlite3-in-bash
 #   * The Definitive Guide to SQLite, 2e
 #   * http://www.thegeekstuff.com/2010/06/bash-array-tutorial/
@@ -26,6 +29,10 @@
 #########################
 # Settings
 #########################
+
+# Custom file that allows overriding all predefined settings
+# http://projects.whyaskwhy.org/projects/email-updates/wiki/Custom_Settings
+OVERRIDES_FILE="/etc/whyaskwhy.org/email_updates.conf"
 
 # Not a bad idea to run with this enabled for a while after big changes
 # and have cron deliver the output to you for verification
@@ -107,6 +114,15 @@ OIFS=${IFS}
 # Set to newlines only so spaces won't trigger a new array entry and so loops
 # will only consider items separated by newlines to be the next in the loop
 IFS=$'\n'
+
+
+
+# Allow overriding any of the predefined settings above
+# http://projects.whyaskwhy.org/projects/email-updates/wiki/Custom_Settings
+if [ -f ${OVERRIDES_FILE} ]; then
+    . ${OVERRIDES_FILE}
+fi
+
 
 #########################
 # Functions
