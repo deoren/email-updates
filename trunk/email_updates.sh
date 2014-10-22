@@ -42,7 +42,7 @@ OVERRIDES_FILES=(
     /etc/whyaskwhy.org/email_updates.conf
 
     # In the same directory as this script
-    $(dirname $0)/email_updates.conf
+    $(dirname $(readlink -e $0))/email_updates.conf
 )
 
 # Not a bad idea to run with this enabled for a while after big changes
@@ -133,7 +133,7 @@ IFS=$'\n'
 #
 # FIXME: Verify permissions first before importing file
 #
-for overrides_file in ${OVERRIDES_FILE[@]}
+for overrides_file in ${OVERRIDES_FILES[@]}
 do
     if [ -f ${overrides_file} ]; then
         . ${overrides_file}
