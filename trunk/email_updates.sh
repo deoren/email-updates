@@ -31,8 +31,19 @@
 #########################
 
 # Custom file that allows overriding all predefined settings
+#
+# The entries are checked in order and the last one has precedence over earlier
+# earlier entries
+#
 # http://projects.whyaskwhy.org/projects/email-updates/wiki/Custom_Settings
-OVERRIDES_FILE="/etc/whyaskwhy.org/email_updates.conf"
+OVERRIDES_FILES=(
+
+    # System wide location, preferred
+    /etc/whyaskwhy.org/email_updates.conf
+
+    # In the same directory as this script
+    $(dirname $0)/email_updates.conf
+)
 
 # Not a bad idea to run with this enabled for a while after big changes
 # and have cron deliver the output to you for verification
@@ -122,9 +133,12 @@ IFS=$'\n'
 #
 # FIXME: Verify permissions first before importing file
 #
-if [ -f ${OVERRIDES_FILE} ]; then
-    . ${OVERRIDES_FILE}
-fi
+for overrides_file in ${OVERRIDES_FILE[@]}
+do
+    if [ -f ${overrides_file} ]; then
+        . ${overrides_file}
+    fi
+done
 
 
 #########################
