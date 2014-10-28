@@ -1,0 +1,27 @@
+Loaded plugins: fastestmirror, presto
+
+glibc.i686                                                                                      2.12-1.107.el6_4.2                                                                    update 
+glibc.x86_64                                                                                    2.12-1.107.el6_4.2                                                                    update 
+glibc-common.x86_64                                                                             2.12-1.107.el6_4.2                                                                    update 
+glibc-devel.x86_64                                                                              2.12-1.107.el6_4.2                                                                    update 
+glibc-headers.x86_64                                                                            2.12-1.107.el6_4.2                                                                    update 
+kernel.x86_64                                                                                   2.6.32-358.14.1.el6                                                                   update 
+kernel-devel.x86_64                                                                             2.6.32-358.14.1.el6                                                                   update 
+kernel-firmware.noarch                                                                          2.6.32-358.14.1.el6                                                                   update 
+kernel-headers.x86_64                                                                           2.6.32-358.14.1.el6                                                                   update 
+krb5-devel.x86_64                                                                               1.10.3-10.el6_4.4                                                                     update 
+krb5-libs.i686                                                                                  1.10.3-10.el6_4.4                                                                     update 
+krb5-libs.x86_64                                                                                1.10.3-10.el6_4.4                                                                     update 
+krb5-pkinit-openssl.x86_64                                                                      1.10.3-10.el6_4.4                                                                     update 
+krb5-workstation.x86_64                                                                         1.10.3-10.el6_4.4                                                                     update 
+php.x86_64                                                                                      5.3.3-23.el6_4                                                                        update 
+php-cli.x86_64                                                                                  5.3.3-23.el6_4                                                                        update 
+php-common.x86_64                                                                               5.3.3-23.el6_4                                                                        update 
+php-mysql.x86_64                                                                                5.3.3-23.el6_4                                                                        update 
+php-pdo.x86_64                                                                                  5.3.3-23.el6_4                                                                        update 
+python.x86_64                                                                                   2.6.6-37.el6_4                                                                        update 
+python-libs.x86_64                                                                              2.6.6-37.el6_4                                                                        update 
+tzdata.noarch                                                                                   2013c-2.el6                                                                           update 
+Obsoleting Packages
+krb5-pkinit-openssl.x86_64                                                                      1.10.3-10.el6_4.4                                                                     update 
+    krb5-pkinit-openssl.x86_64                                                                  1.10.3-10.el6_4.3     
