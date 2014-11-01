@@ -24,7 +24,7 @@
 #   * http://stackoverflow.com/questions/5431909/bash-functions-return-boolean-to-be-used-in-if
 #   * http://mywiki.wooledge.org/BashPitfalls
 #   * http://stackoverflow.com/questions/1063347/passing-arrays-as-parameters-in-bash
-
+#   * http://stackoverflow.com/questions/7442417/how-to-sort-an-array-in-bash
 
 #########################
 # Settings
