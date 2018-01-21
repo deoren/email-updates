@@ -3,7 +3,7 @@ A script that is intended to be run periodically on a GNU/Linux box to report an
 
 ## Custom Settings
 
-"Out of the box", `email_updates.sh` comes preconfigured with most settings ready for use, but prior to v0.3 you had to modify the script directly to set common values like email address. With `v0.3`, you do this through a custom configuration file.
+"Out of the box", `email_updates.sh` comes preconfigured with most settings ready for use, but prior to `v0.2.5` you had to modify the script directly to set common values like email address. With `v0.2.5`, you do this through a custom configuration file.
 
 
   `/etc/whyaskwhy.org/email_updates.conf`
