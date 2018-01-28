@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# $Id$
-# $HeadURL$
 
 # Purpose:
 #   This script is intended to be run once daily to report any patches
@@ -64,13 +62,13 @@ MATCH_CENTOS='CentOS'
 
 # Used when providing host info via email (if enabled)
 MATCH_IFCONFIG_FULL='^\s+inet addr:[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+'
-MATCH_IFCONFIG_IPS_ONLY='[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+' 
+MATCH_IFCONFIG_IPS_ONLY='[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+'
 
 # Mash the contents into a single string - not creating an array via ()
 RELEASE_INFO=$(cat /etc/*release)
 
-# Let's not rely on a crontab to be configured properly. Instead, let's go 
-# ahead and append to what's already set with the most important entries. 
+# Let's not rely on a crontab to be configured properly. Instead, let's go
+# ahead and append to what's already set with the most important entries.
 # PATH lookups are short-circuited on first match anyway, so lookup times
 # should be trivial.
 PATH="${PATH}:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -256,13 +254,13 @@ is_patch_already_reported() {
         echoerr "\n[I] Checking \"$1\" against previously reported updates ..."
     fi
 
-    # Rely on the sanitized string having fields separated by spaces so we can 
+    # Rely on the sanitized string having fields separated by spaces so we can
     # grab the first field (no version info) and use that as a search term
     package_prefix=$(echo ${1} | cut -d' ' -f 1)
 
     sql_query_match_first_field="SELECT * FROM reported_updates WHERE package LIKE '${package_prefix}%' ORDER BY time DESC"
 
-    previously_reported_updates=($(sqlite3 "${DB_FILE}" "${sql_query_match_first_field}" | cut -d '|' -f 2)) 
+    previously_reported_updates=($(sqlite3 "${DB_FILE}" "${sql_query_match_first_field}" | cut -d '|' -f 2))
 
     for previously_reported_update in ${previously_reported_updates[@]}
     do
@@ -270,7 +268,7 @@ is_patch_already_reported() {
             echoerr "[I] SQL QUERY MATCH:" $previously_reported_update
         fi
 
-        # Assume that old database entries may need multiple spaces 
+        # Assume that old database entries may need multiple spaces
         # stripped from strings so we can accurately compare them
         stripped_prev_reported_update=$(sanitize_string ${previously_reported_update})
 
@@ -280,7 +278,7 @@ is_patch_already_reported() {
             return 0
         fi
     done
-    
+
     # If we get this far, report no match
     return 1
 }
@@ -403,7 +401,7 @@ sync_packages_list () {
 
                 # Fixes #120
                 #
-                # Toss stdout, but only toss the one RHEL status message from 
+                # Toss stdout, but only toss the one RHEL status message from
                 # stderr that just mentions the system is receiving updates
                 # from Red Hat Subscription Management
                 yum check-update 2> >(grep -v 'This system is receiving')  \
@@ -456,12 +454,12 @@ calculate_updates_via_up2date() {
 calculate_updates_via_yum() {
 
     declare -a YUM_CHECKUPDATE_OUTPUT
- 
+
     # Capturing output in array so we can more easily filter out what we're not
     # interested in considering an "update". Don't toss lines without a number
     # yet; sanitize_string() handles that. We need "Obsoleting Packages"
     # in place as a cut-off marker. We're also tossing (see #120)
-    # the one RHEL status message from stderr  that just mentions the system 
+    # the one RHEL status message from stderr  that just mentions the system
     # is receiving updates from Red Hat Subscription Management
     YUM_CHECKUPDATE_OUTPUT=(
         $(yum check-update 2> >(grep -v 'This system is receiving'))
