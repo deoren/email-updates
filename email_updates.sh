@@ -31,6 +31,7 @@ set -e
 #   * http://mywiki.wooledge.org/BashPitfalls
 #   * http://stackoverflow.com/questions/1063347/passing-arrays-as-parameters-in-bash
 #   * http://stackoverflow.com/questions/7442417/how-to-sort-an-array-in-bash
+#   * https://serverfault.com/questions/477503/check-if-array-is-empty-in-bash
 
 #########################
 # Settings
@@ -558,7 +559,7 @@ AVAILABLE_UPDATES=($(calculate_updates_available))
 
 
 # If updates are available ...
-if [[ ${#AVAILABLE_UPDATES[@]} -gt 0 ]]; then
+if [[ ${AVAILABLE_UPDATES[@]:+${AVAILABLE_UPDATES[@]}} ]]; then
 
     declare -a UNREPORTED_UPDATES SKIPPED_UPDATES
 
@@ -568,7 +569,7 @@ if [[ ${#AVAILABLE_UPDATES[@]} -gt 0 ]]; then
         if $(is_patch_already_reported ${update}); then
 
             # Skip the update, but log it for troubleshooting purposes
-            SKIPPED_UPDATES=("${SKIPPED_UPDATES[@]}" "${update}")
+            SKIPPED_UPDATES+=("${update}")
 
             if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
                 echo "[SKIP] ${update}"
@@ -577,7 +578,8 @@ if [[ ${#AVAILABLE_UPDATES[@]} -gt 0 ]]; then
         else
             # Add the update to an array to be reported
             # FIXME: There is a bug here that results in a duplicate item
-            UNREPORTED_UPDATES=("${UNREPORTED_UPDATES[@]}" "${update}")
+            # TODO: Confirm if this is still an issue
+            UNREPORTED_UPDATES+=("${update}")
 
             if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
                 echo "[INCL] ${update}"
@@ -591,18 +593,19 @@ if [[ ${#AVAILABLE_UPDATES[@]} -gt 0 ]]; then
         print_patch_arrays
     fi
 
-    # If we're not in debug mode, send an email
-    if [[ "${DEBUG_ON}" -eq 0 ]]; then
-        # If there are no updates, DON'T send an email
-        if [[ ! ${#UNREPORTED_UPDATES[@]} -gt 0 ]]; then
-            :
-        else
-            # There ARE updates, so send the email
+    # If there are updates that not have been reported already ...
+    if [[ ${UNREPORTED_UPDATES[@]:+${UNREPORTED_UPDATES[@]}} ]]; then
+
+        # If we're not in debug mode, send an email
+        if [[ "${DEBUG_ON}" -eq 0 ]]; then
+
             email_report "${UNREPORTED_UPDATES[@]}"
         fi
-    fi
 
-    record_reported_patches "${UNREPORTED_UPDATES[@]}"
+        # Record the updates, regardless of whether an email was sent.
+        record_reported_patches "${UNREPORTED_UPDATES[@]}"
+
+    fi
 
 else
 
