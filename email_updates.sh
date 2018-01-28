@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Do not allow use of unitilized variables
+set -u
+
+# Exit if any statement returns a non-true value
+set -e
 
 # Official project URL: https://github.com/WhyAskWhy/email-updates
 
