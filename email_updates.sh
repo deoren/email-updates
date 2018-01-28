@@ -6,6 +6,12 @@ set -u
 # Exit if any statement returns a non-true value
 set -e
 
+# Exit if ANY command in a pipeline fails instead of allowing the exit code
+# of later commands in the pipeline to determine overall success
+set -o pipefail
+
+
+
 # Official project URL: https://github.com/WhyAskWhy/email-updates
 
 
