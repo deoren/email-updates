@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Do not allow use of unitilized variables
+set -u
+
+# Exit if any statement returns a non-true value
+set -e
 
 # Purpose:
 #   This script is intended to be run once daily to report any patches
