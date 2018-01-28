@@ -1,6 +1,9 @@
 #!/bin/bash
 
 
+# Official project URL: https://github.com/WhyAskWhy/email-updates
+
+
 # Purpose:
 #   This script is intended to be run once daily to report any patches
 #   available for the OS. If a particular patch has been reported previously
