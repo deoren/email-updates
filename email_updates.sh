@@ -306,27 +306,40 @@ print_patch_arrays() {
 
     #NOTE: Relies on global variables
 
-    echo -e '\n\n***************************************************'
-    #echo "${#UNREPORTED_UPDATES[@]} unreported update(s) are available"
-    echo "UNREPORTED UPDATES"
-    echo -e '***************************************************\n'
-    echo -e "  ${#UNREPORTED_UPDATES[@]} unreported update(s) are available\n"
+    if [[ ${UNREPORTED_UPDATES[@]:+${UNREPORTED_UPDATES[@]}} ]]; then
+        echo -e '\n\n***************************************************'
+        #echo "${#UNREPORTED_UPDATES[@]} unreported update(s) are available"
+        echo "UNREPORTED UPDATES"
+        echo -e '***************************************************\n'
+        echo -e "  ${#UNREPORTED_UPDATES[@]} unreported update(s) are available\n"
 
-    for unreported_update in "${UNREPORTED_UPDATES[@]}"
-    do
-        echo "  * ${unreported_update}"
-    done
+        for unreported_update in "${UNREPORTED_UPDATES[@]}"
+        do
+            echo "  * ${unreported_update}"
+        done
+    else
+        echo "[!] FAIL: Attempt to print empty arrays."
+        exit 1
+    fi
 
-    echo -e '\n***************************************************'
-    #echo "${#SKIPPED_UPDATES[@]} skipped update(s) are available"
-    echo "SKIPPED UPDATES"
-    echo -e '***************************************************\n'
-    echo -e "  ${#SKIPPED_UPDATES[@]} skipped update(s) are available\n"
 
-    for skipped_update in "${SKIPPED_UPDATES[@]}"
-    do
-        echo "  * ${skipped_update}"
-    done
+    if [[ ${SKIPPED_UPDATES[@]:+${SKIPPED_UPDATES[@]}} ]]; then
+        echo -e '\n***************************************************'
+        #echo "${#SKIPPED_UPDATES[@]} skipped update(s) are available"
+        echo "SKIPPED UPDATES"
+        echo -e '***************************************************\n'
+        echo -e "  ${#SKIPPED_UPDATES[@]} skipped update(s) are available\n"
+
+        for skipped_update in "${SKIPPED_UPDATES[@]}"
+        do
+            echo "  * ${skipped_update}"
+        done
+    else
+        echo "[!] FAIL: Attempt to print empty SKIPPED_UPDATES array."
+        exit 1
+    fi
+
+
 
 }
 
@@ -335,6 +348,12 @@ email_report() {
 
     # $@ is ALL arguments to this function, i.e., the unreported patches
     updates=(${@})
+
+    # Make sure that the array isn't empty ...
+    if [[ ! ${updates[@]:+${updates[@]}} ]]; then
+        echo "[!] FAIL: Attempt to email an empty report."
+        exit 1
+    fi
 
     # Use $1 array function argument
     NUMBER_OF_UPDATES="${#updates[@]}"
@@ -381,6 +400,12 @@ record_reported_patches() {
 
     # $@ is ALL arguments to this function, i.e., the unreported patches
     updates=(${@})
+
+    # Make sure that the array isn't empty ...
+    if [[ ! ${updates[@]:+${updates[@]}} ]]; then
+        echo "[!] FAIL: Attempt to record empty patch list."
+        exit 1
+    fi
 
     # Add reported patches to the database
 
@@ -457,11 +482,15 @@ calculate_updates_via_up2date() {
     # Capture output in array so we can clean and return it
     RAW_UPDATES_ARRAY=($(up2date --list | grep -i -E -w "${UP2DATE_MATCH_ON}"))
 
-    for update in "${RAW_UPDATES_ARRAY[@]}"
-    do
-        # Return cleaned up string
-        echo $(sanitize_string ${update})
-    done
+    # Make sure that the array isn't empty ...
+    if [[ ${RAW_UPDATES_ARRAY[@]:+${RAW_UPDATES_ARRAY[@]}} ]]; then
+
+        for update in "${RAW_UPDATES_ARRAY[@]}"
+        do
+            # Return cleaned up string
+            echo $(sanitize_string ${update})
+        done
+    fi
 
 }
 
@@ -480,20 +509,24 @@ calculate_updates_via_yum() {
         $(yum check-update 2> >(grep -v 'This system is receiving'))
     )
 
-    for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
-     do
-        # If we've gotten this far it means we have passed all available
-        # updates and yum is telling us what old packages it will remove
-        if [[ "${line}" =~ "Obsoleting Packages" ]]; then
-            if [[ "${DEBUG_ON}" -ne 0 ]]; then
-                echoerr "Hit marker, breaking loop"
-            fi
+    # Make sure that the array isn't empty ...
+    if [[ ${YUM_CHECKUPDATE_OUTPUT[@]:+${YUM_CHECKUPDATE_OUTPUT[@]}} ]]; then
 
-            break
-        else
-            echo $(sanitize_string ${line})
-        fi
-     done
+        for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
+        do
+            # If we've gotten this far it means we have passed all available
+            # updates and yum is telling us what old packages it will remove
+            if [[ "${line}" =~ "Obsoleting Packages" ]]; then
+                if [[ "${DEBUG_ON}" -ne 0 ]]; then
+                    echoerr "Hit marker, breaking loop"
+                fi
+
+                break
+            else
+                echo $(sanitize_string ${line})
+            fi
+        done
+    fi
 
 }
 
@@ -505,11 +538,15 @@ calculate_updates_via_apt() {
     # Using the follwing syntax mainly as a reminder that it's available
     RAW_UPDATES_ARRAY=($(apt-get dist-upgrade -s | grep 'Conf' | cut -c 6-))
 
-    for update in "${RAW_UPDATES_ARRAY[@]}"
-    do
-        # Return cleaned up string
-        echo $(sanitize_string ${update})
-    done
+    # Make sure that the array isn't empty ...
+    if [[ ${RAW_UPDATES_ARRAY[@]:+${RAW_UPDATES_ARRAY[@]}} ]]; then
+
+        for update in "${RAW_UPDATES_ARRAY[@]}"
+        do
+            # Return cleaned up string
+            echo $(sanitize_string ${update})
+        done
+    fi
 
 }
 
