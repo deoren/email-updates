@@ -277,22 +277,28 @@ is_patch_already_reported() {
 
     previously_reported_updates=($(sqlite3 "${DB_FILE}" "${sql_query_match_first_field}" | cut -d '|' -f 2))
 
-    for previously_reported_update in ${previously_reported_updates[@]}
-    do
-        if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
-            echoerr "[I] SQL QUERY MATCH:" $previously_reported_update
-        fi
+    # Make sure array is populated before attempting to iterate over it
+    # (even if the default behavior of zero iterations seems sensible)
+    # in order to avoid "unbound variable" error.
+    if [[ ${previously_reported_updates[@]:+${previously_reported_updates[@]}} ]]; then
 
-        # Assume that old database entries may need multiple spaces
-        # stripped from strings so we can accurately compare them
-        stripped_prev_reported_update=$(sanitize_string ${previously_reported_update})
+        for previously_reported_update in ${previously_reported_updates[@]}
+        do
+            if [[ "${VERBOSE_DEBUG_ON}" -ne 0 ]]; then
+                echoerr "[I] SQL QUERY MATCH:" $previously_reported_update
+            fi
 
-        # See if the selected patch has already been reported
-        if [[ "${stripped_prev_reported_update}" == "${patch_to_check}" ]]; then
-            # Report a match, and exit loop
-            return 0
-        fi
-    done
+            # Assume that old database entries may need multiple spaces
+            # stripped from strings so we can accurately compare them
+            stripped_prev_reported_update=$(sanitize_string ${previously_reported_update})
+
+            # See if the selected patch has already been reported
+            if [[ "${stripped_prev_reported_update}" == "${patch_to_check}" ]]; then
+                # Report a match, and exit loop
+                return 0
+            fi
+        done
+    fi
 
     # If we get this far, report no match
     return 1
