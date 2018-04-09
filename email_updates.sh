@@ -365,6 +365,9 @@ email_report() {
     NUMBER_OF_UPDATES="${#updates[@]}"
     EMAIL_SUBJECT="${HOSTNAME}: ${NUMBER_OF_UPDATES} update(s) are available"
 
+    # TODO: Add guard for this variable not existing (new feature as of v0.3)
+    echo -e "${EMAIL_HEADER}\n" >> ${TEMP_FILE}
+
     # Write updates to the temp file
     for update in "${updates[@]}"
     do
@@ -388,6 +391,9 @@ email_report() {
         echo $(ifconfig | grep -Po "${MATCH_IFCONFIG_FULL}" | grep -v '127.0.0' | grep -Po "${MATCH_IFCONFIG_IPS_ONLY}") >> ${TEMP_FILE}
 
     fi
+
+    # TODO: Add guard for this variable not existing (new feature as of v0.3)
+    echo -e "\n${EMAIL_FOOTER}\n" >> ${TEMP_FILE}
 
     # Send the report via email
     # If user chose to masquerade this email as a specific user, set the value
