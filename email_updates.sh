@@ -16,19 +16,20 @@ set -o pipefail
 
 
 # Purpose:
-#   This script is intended to be run once daily to report any patches
-#   available for the OS. If a particular patch has been reported previously
-#   the goal is to NOT report it again (TODO: unless requested via FLAG).
+#
+#   This script is intended to be run periodically (e.g., 1-2x daily)
+#   to report any OS patches available for installation. If a particular
+#   patch has been reported previously the goal is to NOT report it again
 
-# Compatiblity notes:
-#  * This script needs to be compatible with:
-#    "GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)"
-#    as that is the oldest version of Bash that I'll be using this script with.
-#  * Tested on RHELv5.x, CentOSv5.x & CentOSv6.x; basic update and LOCKSS repos
+# Tested on:
+#
+#  CentOS 6
+#  CentOS 7
+#  Red Hat Enterprise Linux 7
+#  Ubuntu 14.04
+#  Ubuntu 16.04
 
 # References:
-#
-#   * http://projects.whyaskwhy.org/projects/email-updates/wiki/Custom_Settings
 #
 #   * http://quickies.andreaolivato.net/post/133473114/using-sqlite3-in-bash
 #   * The Definitive Guide to SQLite, 2e
@@ -38,6 +39,7 @@ set -o pipefail
 #   * http://stackoverflow.com/questions/1063347/passing-arrays-as-parameters-in-bash
 #   * http://stackoverflow.com/questions/7442417/how-to-sort-an-array-in-bash
 #   * https://serverfault.com/questions/477503/check-if-array-is-empty-in-bash
+
 
 #########################
 # Settings
@@ -68,10 +70,9 @@ VERBOSE_DEBUG_ON=0
 # Useful for testing where we don't want to bang on upstream servers too much
 SKIP_UPSTREAM_SYNC=0
 
-# Used to determine whether up2date, yum or apt-get should be used to
+# Used to determine whether yum or apt-get should be used to
 # calculate the available updates
-MATCH_RHEL4='Red Hat Enterprise Linux.*4'
-MATCH_RHEL5='Red Hat Enterprise Linux.*5'
+MATCH_RHEL='Red Hat Enterprise Linux.*'
 MATCH_UBUNTU='Ubuntu'
 MATCH_CENTOS='CentOS'
 
@@ -436,11 +437,6 @@ sync_packages_list () {
     THIS_DISTRO=$(detect_supported_distros)
 
     case "${THIS_DISTRO}" in
-        up2date )
-            # FIXME: There isn't a "run from cache" option to use later on that
-            #        I am aware of, so we'll just do a single run later
-            :
-            ;;
         apt )
             # Skip upstream sync unless running in production mode
             if [[ "${SKIP_UPSTREAM_SYNC}" -eq 0 ]]; then
@@ -468,11 +464,7 @@ sync_packages_list () {
 
 detect_supported_distros () {
 
-    if [[ "${RELEASE_INFO}" =~ ${MATCH_RHEL4} ]]; then
-        echo "up2date"
-    fi
-
-    if [[ "${RELEASE_INFO}" =~ ${MATCH_RHEL5} ]]; then
+    if [[ "${RELEASE_INFO}" =~ ${MATCH_RHEL} ]]; then
         echo "yum"
     fi
 
@@ -482,26 +474,6 @@ detect_supported_distros () {
 
     if [[ "${RELEASE_INFO}" =~ ${MATCH_UBUNTU} ]]; then
         echo "apt"
-    fi
-
-}
-
-
-calculate_updates_via_up2date() {
-
-    local -a RAW_UPDATES_ARRAY
-
-    # Capture output in array so we can clean and return it
-    RAW_UPDATES_ARRAY=($(up2date --list | grep -i -E -w "${UP2DATE_MATCH_ON}"))
-
-    # Make sure that the array isn't empty ...
-    if [[ ${RAW_UPDATES_ARRAY[@]:+${RAW_UPDATES_ARRAY[@]}} ]]; then
-
-        for update in "${RAW_UPDATES_ARRAY[@]}"
-        do
-            # Return cleaned up string
-            echo $(sanitize_string ${update})
-        done
     fi
 
 }
@@ -568,8 +540,6 @@ calculate_updates_available () {
     THIS_DISTRO=$(detect_supported_distros)
 
     case "${THIS_DISTRO}" in
-        up2date ) calculate_updates_via_up2date
-            ;;
         apt     ) calculate_updates_via_apt
             ;;
         yum     ) calculate_updates_via_yum
