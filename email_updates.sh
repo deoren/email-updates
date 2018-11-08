@@ -129,6 +129,11 @@ DEPENDENCIES=(
 
 )
 
+# http://man7.org/linux/man-pages/man8/yum.8.html
+YUM_CHECK_UPDATE_STATUS_CODE_NO_UPDATES=0
+YUM_CHECK_UPDATE_STATUS_CODE_ERROR=1
+YUM_CHECK_UPDATE_STATUS_CODE_UPDATES_AVAILABLE=100
+
 #------------------------------
 # Internal Field Separator
 #------------------------------
@@ -493,23 +498,40 @@ calculate_updates_via_yum() {
         $(yum check-update 2> >(grep -v 'This system is receiving'))
     )
 
-    # Make sure that the array isn't empty ...
-    if [[ ${YUM_CHECKUPDATE_OUTPUT[@]:+${YUM_CHECKUPDATE_OUTPUT[@]}} ]]; then
+    # Note: Testing from CentOS 7 confirms that the exit code from
+    # 'yum check-update' is not masked, so we have the three known exit codes
+    # to work with. See variable definitions earlier in this script for details.
 
-        for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
-        do
-            # If we've gotten this far it means we have passed all available
-            # updates and yum is telling us what old packages it will remove
-            if [[ "${line}" =~ "Obsoleting Packages" ]]; then
-                if [[ "${DEBUG_ON}" -ne 0 ]]; then
-                    echoerr "Hit marker, breaking loop"
+    # Make sure that there are updates to process
+    if [[ $? -eq ${YUM_CHECK_UPDATE_STATUS_CODE_UPDATES_AVAILABLE} ]]; then
+
+        # Make sure that the array isn't empty ...
+        if [[ ${YUM_CHECKUPDATE_OUTPUT[@]:+${YUM_CHECKUPDATE_OUTPUT[@]}} ]]; then
+
+            for line in "${YUM_CHECKUPDATE_OUTPUT[@]}"
+            do
+                # If we've gotten this far it means we have passed all available
+                # updates and yum is telling us what old packages it will remove
+                if [[ "${line}" =~ "Obsoleting Packages" ]]; then
+                    if [[ "${DEBUG_ON}" -ne 0 ]]; then
+                        echoerr "Hit marker, breaking loop"
+                    fi
+
+                    break
+                else
+                    echo $(sanitize_string ${line})
                 fi
+            done
+        fi
 
-                break
-            else
-                echo $(sanitize_string ${line})
-            fi
-        done
+    elif [[ $? -eq ${YUM_CHECK_UPDATE_STATUS_CODE_NO_UPDATES} ]]; then
+        # Do nothing. This is perfectly reasonable.
+        :
+
+    elif [[ $? -eq ${YUM_CHECK_UPDATE_STATUS_CODE_ERROR} ]]; then
+        # Do nothing for now, later we can collect error messages and
+        # report them
+        :
     fi
 
 }
