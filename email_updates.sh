@@ -67,6 +67,16 @@ DEBUG_ON=1
 # Usually not needed
 VERBOSE_DEBUG_ON=0
 
+# Define empty array for later use when collecting errors
+declare -a UPDATE_CHECK_ERRORS
+
+# Flags set independently of DEBUG flags. Default is to toss errors, assuming
+# that they'll be corrected by the time this script is next scheduled to run.
+# This behavior can be overridden here to report them via standard output
+# (which cron will likely catch and email) or within the email report
+REPORT_UPDATE_CHECK_ERRORS_STDOUT=0
+REPORT_UPDATE_CHECK_ERRORS_EMAIL=0
+
 # Useful for testing where we don't want to bang on upstream servers too much
 SKIP_UPSTREAM_SYNC=0
 
@@ -529,9 +539,8 @@ calculate_updates_via_yum() {
         :
 
     elif [[ $? -eq ${YUM_CHECK_UPDATE_STATUS_CODE_ERROR} ]]; then
-        # Do nothing for now, later we can collect error messages and
-        # report them
-        :
+        # Add error to list, continue on for now.
+        UPDATE_CHECK_ERRORS+=('Yum failed to properly run check-updates from cache')
     fi
 
 }
@@ -657,13 +666,39 @@ if [[ ${AVAILABLE_UPDATES[@]:+${AVAILABLE_UPDATES[@]}} ]]; then
 else
 
     if [[ "${DEBUG_ON}" -ne 0 ]]; then
+
         echo -e '\n\n************************'
         echo "No updates found"
         echo -e   '************************'
-    fi
 
-    # The "do nothing" operator in case DEBUG_ON is off
-    # FIXME: Needed?
-    :
+
+        if [[ ! -z "${UPDATE_CHECK_ERRORS[@]}" ]]; then
+
+            if [[ "${REPORT_UPDATE_CHECK_ERRORS_STDOUT}" ]]; then
+
+
+                echo -e '\n\n************************'
+                echo "The following errors were encountered while checking for updates:"
+                for error_entry in "${UPDATE_CHECK_ERRORS[@]}"
+                do
+                    echo "\'$error_entry\'"
+                done
+                echo -e   '************************'
+            fi
+
+            if [[ "${REPORT_UPDATE_CHECK_ERRORS_EMAIL}" ]]; then
+
+                # TODO: Add this functionality
+                :
+
+            fi
+
+        fi
+    else
+
+        # The "do nothing" operator in case DEBUG_ON is off
+        # FIXME: Needed?
+        :
+    fi
 
 fi
